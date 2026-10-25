@@ -8,11 +8,11 @@
 
 ## 部署到 GitHub Pages
 
-本仓库要上传的**只有 `index.html` 一个文件**（6.1 MB，音频与贴纸已全部 base64 内嵌）。
+本仓库要上传的是 **`index.html` + `audio/` 目录 + `README.md`**（音频为独立 mp3 文件，按需加载，首页只需下载 ~260 KB 的 HTML）。
 
 ```bash
 git init
-git add index.html
+git add index.html audio README.md
 git commit -m "延时回响 Delayed Echo"
 git remote add origin https://github.com/<你的用户名>/delayed-echo-game.git
 git push -u origin main
@@ -24,7 +24,7 @@ git push -u origin main
 https://<你的用户名>.github.io/delayed-echo-game/
 ```
 
-**不需要**任何构建步骤、npm、base path 配置。整份游戏就是一个 HTML 文件，双击也能离线运行。
+**不需要**任何构建步骤、npm、base path 配置。页面自包含、资源走相对路径，双击 `index.html` 也能离线运行（本地 `file://` 下音乐同样正常播放）。
 
 > `dev/` 目录是开发脚本与素材，**不参与运行、不需要上传**（仓库体积小、页面加载快）。
 
@@ -34,8 +34,11 @@ https://<你的用户名>.github.io/delayed-echo-game/
 
 ```
 delayed-echo-game/
-├── index.html            ← 游戏本体（唯一需要部署的文件）
-├── README.md
+├── index.html            ← 游戏本体（部署）
+├── audio/                ← 4 首曲目 mp3（部署）：bgm + 第 6 关三幕
+│   ├── bgm.mp3           首页 BGM《花日》
+│   └── act1~3.mp3        第 6 关三幕曲
+├── README.md             （部署）
 └── dev/                  开发用，不上传
     ├── scripts/          生成器与调试脚本
     │                     gen_lv6-v6.js（生成第 6 关三幕地图）
