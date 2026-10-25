@@ -433,13 +433,22 @@ var BLOCKS = [
 var THEME_DEFAULT = {
   name:'米白', bg:'#f2f5fa', brick:'#e8dfd0', brickTop:'#f7f3ea', brickSide:'#cfc6b8',
   brickLine:'#968e80', spike:'#c86a5a', bridge:'#b9c3d4', wood:'#a98d68',
-  door:'#b4adc1', key:'#e0b93c', switch_:'#8b81c0', portal:'#6f7fc4', goal:'#63b37a'
+  door:'#b4adc1', key:'#e0b93c', switch_:'#8b81c0', portal:'#6f7fc4', goal:'#63b37a',
+  sky:'#fff8e6',                                                  // 天空光晕（暖白）
+  skyGrad:['#bcc9e6','#c9c9e0','#ddd6e2','#f0e9e2'],               // 天空四段渐变；null = 按 bg×brickLine 派生
+  mounts:['rgba(176,182,208,.30)','rgba(186,180,205,.24)','rgba(170,178,206,.26)']  // 远山三层；null = 派生
 };
 var THEME = null;                  // 导入的地图可带自己的主题；null = 用默认
 var TH = {};                       // 当前生效主题（THEME 缺失字段回退默认）
 (function(){ for (var k in THEME_DEFAULT) TH[k] = THEME_DEFAULT[k]; })();
-function TA(col, a){               // hex → rgba(col, a)（主题字段存 hex，透明度现场转）
-  var h = String(col || '#000').replace('#', '');
+function TA(col, a){               // hex 或 'rgb(r,g,b)' → rgba(col, a)（主题字段存 hex，透明度现场转）
+  var s = String(col == null ? '#000' : col).trim();
+  if (s.charAt(0) === 'r'){        // mix/light/dark 返回的是 'rgb(...)' 串：不能按 hex 解析，否则一律变黑
+    var m = s.match(/-?\d+(\.\d+)?/g);
+    if (m && m.length >= 3) return 'rgba(' + Math.round(+m[0]) + ',' + Math.round(+m[1]) + ',' + Math.round(+m[2]) + ',' + a + ')';
+    return 'rgba(0,0,0,' + a + ')';
+  }
+  var h = s.replace('#', '');
   if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
   var n = parseInt(h, 16);
   return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
@@ -870,13 +879,16 @@ var ACTS_L6 = [
 var THEME_L6 = {
   cold: { bg:'#2b3444', brick:'#39445a', brickTop:'#5d6d85', brickSide:'#232b39',
           brickLine:'#4a586e', spike:'#c8d4e6', bridge:'#4d5c74', wood:'#6f7f96',
-          door:'#8a99ad', key:'#e8d27a', switch_:'#9aa8c4', portal:'#8fa2bd', goal:'#dfe7f2' },
+          door:'#8a99ad', key:'#e8d27a', switch_:'#9aa8c4', portal:'#8fa2bd', goal:'#dfe7f2',
+          sky:'#cfe3ff', skyGrad:null, mounts:null },      // 暗幕：浅冷光晕 + 天空按主题派生
   dusk: { bg:'#2a1f2e', brick:'#3b2b3c', brickTop:'#6b4a63', brickSide:'#211824',
           brickLine:'#4d3a4d', spike:'#d9b4c4', bridge:'#553a53', wood:'#7a5470',
-          door:'#96688a', key:'#f0c9dd', switch_:'#a97b9d', portal:'#a3759a', goal:'#f0d8e6' },
+          door:'#96688a', key:'#f0c9dd', switch_:'#a97b9d', portal:'#a3759a', goal:'#f0d8e6',
+          sky:'#f0c0dc', skyGrad:null, mounts:null },
   dawn: { bg:'#ece4d2', sky:'#ffffff', brick:'#8a7a5e', brickTop:'#ddd2b6', brickSide:'#6d6048',
           brickLine:'#9d9076', spike:'#5f5442', bridge:'#a3957a', wood:'#bdb094',
-          door:'#7d7059', key:'#8a6a20', switch_:'#9a8d76', portal:'#a89a80', goal:'#4a4335' }
+          door:'#7d7059', key:'#8a6a20', switch_:'#9a8d76', portal:'#a89a80', goal:'#4a4335',
+          skyGrad:null, mounts:null }
 };
 
 /* 新方块参数 */
@@ -1258,6 +1270,10 @@ function loadLevel(i){                 // 载入第 i 关（0 起）：解析地
   if (L.actsOn){ L.hintAct = -1; applyActTheme(0); Snd.exitActMode(true); Snd.enterActMode();
     for (var p0 = 0; p0 < L.portals.length; p0++) L.portals[p0].open = true; }   // 第 6 关：传送门默认全开
   else Snd.exitActMode();
+  if (!L.actsOn && !THEME){        // 内置 1~5 关：主题回默认（别把第 6 关的暗色主题带过来）
+    for (var k in THEME_DEFAULT) TH[k] = THEME_DEFAULT[k];
+    skyGrad = null;
+  }
   FOG.cfg = def.fog || null;            // 本关有没有迷雾（第 3 关起）
   FOG.lit = false; FOG.path = []; FOG.mem = [];
   lvTitle.textContent = def.title;
@@ -2865,10 +2881,18 @@ var skyGrad = null;
 function drawSky(){
   if (!skyGrad){                            // 渐变按主题派生；换主题时缓存作废（applyTheme 里置 null）
     skyGrad = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-    skyGrad.addColorStop(0,    mix(TH.bg, TH.brickLine, .45));
-    skyGrad.addColorStop(0.34, mix(TH.bg, TH.brickLine, .28));
-    skyGrad.addColorStop(0.66, mix(TH.bg, TH.brickLine, .10));
-    skyGrad.addColorStop(1,    light(TH.bg, .04));
+    if (TH.skyGrad && TH.skyGrad.length >= 2){   // 主题直接指定天空四段色标
+      var G = TH.skyGrad;
+      skyGrad.addColorStop(0,    G[0]);
+      skyGrad.addColorStop(0.34, G[1]);
+      skyGrad.addColorStop(0.66, G[2]);
+      skyGrad.addColorStop(1,    G[3] != null ? G[3] : G[2]);
+    } else {                                   // 否则按 bg × brickLine 派生
+      skyGrad.addColorStop(0,    mix(TH.bg, TH.brickLine, .45));
+      skyGrad.addColorStop(0.34, mix(TH.bg, TH.brickLine, .28));
+      skyGrad.addColorStop(0.66, mix(TH.bg, TH.brickLine, .10));
+      skyGrad.addColorStop(1,    light(TH.bg, .04));
+    }
   }
   ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
   /* 天空光晕：主题可用 sky 字段指定（否则按 brickTop 提亮派生）。
@@ -2889,7 +2913,7 @@ var MOUNT = [
 ];
 function drawMountains(){
   for (var i = 0; i < MOUNT.length; i++){
-    poly(MOUNT[i].pts, TA(mix(TH.bg, TH.brickLine, .35 + i * .06), .30 - i * .03));
+    poly(MOUNT[i].pts, (TH.mounts && TH.mounts[i]) || TA(mix(TH.bg, TH.brickLine, .35 + i * .06), .30 - i * .03));
     var p = MOUNT[i].pts;
     poly([p[2], p[3], p[4], p[5], p[4], p[5] + 26, p[2] + 18, p[3] + 40], 'rgba(255,255,255,.14)');
   }
@@ -4426,7 +4450,8 @@ function applyImported(pkg){
 }
 function applyTheme(t){             // 主题缺失字段逐个回退默认（老关卡 = 原配色）
   THEME = t || null;
-  for (var k in THEME_DEFAULT) TH[k] = (t && t[k]) || THEME_DEFAULT[k];
+  for (var k in THEME_DEFAULT)    // 字段存在即采用（null = 该项走派生规则，不吃默认值）
+    TH[k] = (t && Object.prototype.hasOwnProperty.call(t, k) && t[k] != null) ? t[k] : THEME_DEFAULT[k];
   skyGrad = null;                   // 天空渐变按主题派生 → 缓存作废，下次 render 重建
 }
 function setBlocks(arr, merge){    // 注入图块定义（导入用；必须在 loadLevel 之前）
