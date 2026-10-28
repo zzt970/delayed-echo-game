@@ -134,15 +134,18 @@
   /* ---- 关卡选择界面 ---- */
   #select{ flex-direction:column; }
   .sel-card{
-    background:#fff; border-radius:22px; padding:30px 32px 26px;
+    background:#fff; border-radius:22px; padding:24px 32px 20px;
     box-shadow:0 18px 48px rgba(96,86,148,.16); width:min(520px,88vw);
     text-align:center; user-select:none;
+    max-height:96vh; overflow-y:auto;        /* 加了 3 个自定义存档位后内容变长：整卡可滚，小窗口也不截断 */
   }
-  .sel-title{ font-size:17px; letter-spacing:.4em; text-indent:.4em; color:#5d6478; font-weight:600; margin:0 0 20px; }
-  .lv-list{ display:flex; flex-direction:column; gap:12px; }
+  .sel-card::-webkit-scrollbar{ width:6px; }
+  .sel-card::-webkit-scrollbar-thumb{ background:#dcd8ec; border-radius:3px; }
+  .sel-title{ font-size:17px; letter-spacing:.4em; text-indent:.4em; color:#5d6478; font-weight:600; margin:0 0 14px; }
+  .lv-list{ display:flex; flex-direction:column; gap:10px; }
   .lv-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:13px 14px 13px 20px; border:1px solid #e2e7ee; border-radius:14px;
+    padding:12px 14px 12px 20px; border:1px solid #e2e7ee; border-radius:14px;
     background:linear-gradient(135deg,#fdfdff 55%,#f4f2fb); text-align:left;
   }
   .lv-row.unlocked{ cursor:pointer; transition:border-color .16s ease, background .16s ease, transform .16s ease; }
@@ -165,7 +168,52 @@
     content:''; position:absolute; left:2px; top:-6px; width:5px; height:5px;
     border:2px solid #b6bdcb; border-bottom:none; border-radius:6px 6px 0 0;
   }
-  .sel-tip{ color:#a3aaba; font-size:12px; letter-spacing:.06em; margin:14px 0 0; }
+  .sel-tip{ color:#a3aaba; font-size:12px; letter-spacing:.06em; margin:10px 0 0; }
+
+  /* ===== 我的地图：3 个持久存档位（地图编辑器发来的图自动存这里） ===== */
+  .slot-head{
+    display:flex; align-items:center; gap:10px; margin:12px 0 7px;
+    font-size:11.5px; color:#9aa1b2; letter-spacing:.22em; text-indent:.22em;
+  }
+  .slot-head::before, .slot-head::after{ content:''; flex:1; height:1px; background:#e8ebf2; }
+  .slot-list{ display:flex; flex-direction:column; gap:6px; }
+  .slot-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:8px 12px 8px 14px; border:1px dashed #e0e4ed; border-radius:13px;
+    background:#fcfcfe; text-align:left;
+  }
+  .slot-row.filled{ border-style:solid; border-color:#e2e7ee; background:linear-gradient(135deg,#fdfdff 55%,#f4f2fb); }
+  .slot-name{ min-width:0; }
+  .slot-name b{ display:block; font-size:14.5px; color:#5d6478; letter-spacing:.06em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .slot-name i{ display:block; font-style:normal; font-size:11.5px; color:#939bad; margin-top:2px; letter-spacing:.04em; }
+  .slot-row.empty .slot-name b{ color:#b0b7c4; font-weight:500; }
+  .slot-ops{ display:flex; align-items:center; gap:7px; flex:none; }
+  .slot-go{
+    padding:7px 15px; border-radius:999px; font-size:12.5px; letter-spacing:.14em; text-indent:.14em;
+    background:linear-gradient(180deg,#a99fd8,#8a80bf); color:#fff;
+    box-shadow:0 4px 10px rgba(138,128,191,.26); cursor:pointer;
+  }
+  .slot-go:hover{ filter:brightness(1.05); }
+  .slot-del{
+    padding:7px 11px; border-radius:999px; font-size:11.5px; letter-spacing:.06em;
+    color:#b0766c; border:1px solid #ecdbd7; background:#fdf8f6; cursor:pointer;
+    transition:background .14s ease, color .14s ease, border-color .14s ease;
+  }
+  .slot-del:hover{ border-color:#dfc0b9; color:#9c5f52; }
+  /* 删除确认弹窗：把「删了什么」写清楚，按钮默认停在取消 */
+  .del-panel{ max-width:450px; }
+  .del-who{ font-size:15px; color:#5d6478; line-height:1.8; margin:0 0 6px; overflow-wrap:anywhere; }
+  .del-who b{ color:#7b6fc0; font-weight:600; }
+  .del-who i{ display:block; font-style:normal; font-size:12.5px; color:#939bad; margin-top:3px; letter-spacing:.04em; }
+  .rules .del-warn{ margin-top:12px; line-height:1.85; }
+  .del-warn b{ color:#b0604f; }
+  .del-panel .ops .btn{ flex:1; width:auto; margin-top:0; padding:11px 0; }
+  .del-panel .btn:focus{ outline:none; }
+  .del-panel .btn:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(138,128,191,.20); }
+  .panel .btn-danger{ background:#c0705f; border-color:#c0705f; color:#fff; font-weight:600; letter-spacing:.1em; }
+  .panel .btn-danger:hover{ background:#ae6252; border-color:#ae6252; color:#fff; }
+  .panel .btn-danger:focus-visible{ box-shadow:0 0 0 3px rgba(192,112,95,.24); }
 
   /* ===== 首页入场动画 ===== */
   /* ① 标题逐字洗牌：每格含主字 + 两层回声副本，翻牌时三层同步换字 */
@@ -242,8 +290,10 @@
   <div class="sel-card">
     <div class="sel-title">选 择 关 卡</div>
     <div class="lv-list" id="lvList"></div>
+    <div class="slot-head">我 的 地 图 · 三 个 存 档 位</div>
+    <div class="slot-list" id="slotList"></div>
     <p class="sel-tip" id="selTip">测试模式：全部关卡可直接进入</p>
-    <button id="btnImport" class="sel-back" style="margin-bottom:8px">导入地图编辑器发来的地图</button>
+    <button id="btnImport" class="sel-back" style="margin-bottom:6px;padding:7px 18px;font-size:12.5px">导入地图编辑器发来的地图</button>
     <button id="btnSelBack" class="sel-back">返 回</button>
   </div>
 </section>
@@ -260,6 +310,21 @@
     <div class="ops" style="display:flex;gap:10px;justify-content:center;margin-top:10px">
       <button id="btnImpOk" class="btn">开始玩</button>
       <button id="btnImpCancel" class="btn">取 消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除存档位：单独的确认弹窗（删了就没了，必须点一下才真删） -->
+<div id="delBox" class="overlay hidden">
+  <div class="panel del-panel">
+    <div class="panel-title">删 除 存 档</div>
+    <div class="rules">
+      <p class="del-who" id="delWho"></p>
+      <p class="tip del-warn">删掉之后这张地图就<b>找不回来了</b>。<br>编辑器里的原图还在，改完可以再「发送到游戏」。</p>
+    </div>
+    <div class="ops" style="display:flex;gap:10px;justify-content:center;margin-top:16px">
+      <button id="btnDelNo" class="btn">取 消</button>
+      <button id="btnDelOk" class="btn btn-danger">确 认 删 除</button>
     </div>
   </div>
 </div>
@@ -500,8 +565,8 @@ var elPause = $('pause'), elWin = $('win'), elToast = $('toast');
 var winText = $('winText'), btnWinNext = $('btnWinNext'), btnWinHome = $('btnWinHome');
 var elIntro = $('intro'), elSign = $('signbox');
 var elDead = $('deadbox');
-var elSelect = $('select'), lvList = $('lvList');
-var elImport = $('importBox'), elInbox = $('inboxBox');
+var elSelect = $('select'), lvList = $('lvList'), slotList = $('slotList');
+var elImport = $('importBox'), elInbox = $('inboxBox'), elDel = $('delBox');
 
 /* ---------------- 关卡进度（本机 localStorage 记忆） ----------------
    prog.unlocked = 当前可玩的最大关卡下标；prog.passed = 已通关关卡列表。
@@ -537,6 +602,7 @@ function buildLevelList(){
     ? '测试模式：全部关卡可直接进入'
     : '通关上一关解锁下一关 · 进度保存在本设备浏览器';
   for (var i = 0; i < LEVELS.length; i++){
+    if (LEVELS[i].custom) continue;        // 自定义地图不进正式列表（它在下面「我的地图」三格里）
     var def = LEVELS[i], parts = def.title.split('·');
     var unlocked = ALL_UNLOCKED || i <= prog.unlocked;
     var passed = prog.passed.indexOf(i) >= 0;
@@ -563,6 +629,7 @@ function buildLevelList(){
     }
     lvList.appendChild(row);
   }
+  buildSlotList();                          // 「我的地图」三个存档位跟列表一起刷新
 }
 var btnR = $('btnR'), stepTxt = $('stepTxt'), elCtrl = $('ctrl');
 
@@ -589,13 +656,16 @@ var MAP_L1 = [
 ];
 
 /* 第 2 关（按用户手绘路线 1:1；坐标约定：左下角为原点，x = 列+1，y = 12-行）
-   #实心  ^尖刺  T柱顶大尖  *A机关(刺+压力板同格)  B B机关(压力板)
+   #实心  ^尖刺  Y落脚刺（会扣血，但自动跳跃允许落在它上面）  T柱顶大尖  *A机关(刺+压力板同格)
+   B B机关(压力板)
    - 半砖(只占半格：-=上半格、==下半格底边齐平整砖；下方跳跃不撞头)
    v 半格基座尖刺（踩在下半砖顶面）
    D石门(3格)  G出口(2格)  E升降木板  P出生点
    路线：出生(0,9) → 底层向右（平台+高柱大刺T）→ 折返向上（双层台→独块→中段半砖）→
-   压力板(0,2)：踩住开门（刺已删、不扣血），影子踩住 → 石门(20,1~3)开
-   → 返回底层向右：独块(8,7)→双块(10~12,7)→按钮平台(13~16,6)
+   压力板(0,2)：踩住开门，人一走门就关 → 按 R 把影子留在板上（影子替你守着）→ 石门(20,1~3)常开
+   → 返回底层向右：**落脚刺 Y(8,6) 钉在独块(8,7)顶上 —— 这条路只有这一格能落**，
+   跳上去必掉 1 格血（全关唯一的强制扣血点：玩家在这里第一次看见自己的血条掉格，
+   而影子踩同样的刺一点事没有——这关的主题一次讲完）→ 双块(10~12,7)→按钮平台(13~16,6)
    → B机关(15,5)：踩住时升降木板(17,6)上下往返（板面 228↔324）、离开即停 → 跳上木板
    → 踩上升后的木板 → 跳上出口高台(19~21,4) → 穿石门 → 出口(21,2~3)。
    右侧几何（防抄近道）：木板(17)紧贴按钮平台右缘外侧；出口高台与木板隔 1 格、与按钮
@@ -604,12 +674,12 @@ var MAP_L1 = [
 var MAP_L2 = [
   '........................', // 0
   '...^.^.^.^..........D...', // 1
-  '_.--------..........DG..', // 2  压力板(刺已删) / 长平台整排上半砖（下方跳跃不撞头）/ 石门 / 出口
+  '_.--------..........DG..', // 2  压力板(0,2) / 长平台整排上半砖（下方跳跃不撞头）/ 石门 / 出口
   '#.........#^........DG..', // 3  底座恢复整块 / 台阶+尖刺 / 石门 / 出口
   '.#..v......##......###..', // 4  尖刺(v=半格基座)踩在下半砖顶面 / 出口高台(19~21,4)
   '..#====........B........', // 5  单块 + 四连半砖(=下半格对齐：底边与单块齐平，顶面低半格)
-  '...........^.####E......', // 6  尖刺 / 双块+升降木板（原中段平台已上移为 row5 半砖）
-  '........#.###...........', // 7
+  '........Y..^.####E......', // 6  落脚刺(8,6)钉在独块(8,7)顶上 / 尖刺(11,6) / B平台+升降木板
+  '........#.###...........', // 7  独块(8,7) 是东行必经的一级台阶 —— 刺就在它头顶
   '....^..###..............', // 8
   'P.####T.................', // 9
   '###...#.................', // 10
@@ -644,13 +714,13 @@ var MAP_L3 = [
   '#..............................#........', // 16 y=14
   '#..............................#........', // 17 y=13
   '#E#.........--.................#........', // 18 y=12  木板E(2)
-  '##------=.....--...--....--....#.--=.--=', // 19 y=11
+  '##-------.....--...--....--....#.--=.--=', // 19 y=11  （col8 与左边 col2~7 齐平：原来是一块'='，比平台低半格）
   '##........=.....-^-..-G^-..-...#..#...#.', // 20 y=10  尖刺(18)(24)/星星(23)
   '##.......=.=.....-....--....-=.#.#^#.#^#', // 21 y=9   尖刺(35)(39)
   '##A.^..=....=..................#..#...#.', // 22 y=8   开关A(3)/尖刺(5)
   '#-----..=....=.................#....=...', // 23 y=7
-  '#.........=...=...............F#...#....', // 24 y=6   木板F(31)
-  '#........=....#............B^###....-...', // 25 y=5   开关B(28)/尖刺(29)
+  '#.............=...............F#...#....', // 24 y=6   木板F(31)
+  '#........==...#............B^###....-...', // 25 y=5   开关B(28)/尖刺(29)
   '#.......=##...#...........######.=----=.', // 26 y=4
   '#......=###...#...........######.-====-.', // 27 y=3
   '#P....=####^^.#^.^.^.^.^########........', // 28 y=2   出生点(2)/尖刺(12)(13)(16)(18)(20)(22)(24)
@@ -926,12 +996,13 @@ var LEVELS = [
     title:'第2关·回声借道', sub:'影子踩住机关，你踩它的路',
     hp:2, map:MAP_L2, loop:false,          // 影子踩住 A机关不循环 → 石门常开
     signText:'从这里开始，尖刺会咬人。<br>走错一步就得从头再来——但你的影子还记得路。',
-    spikeTip:'压力板不扣血，尖刺才扣血',
+    spikeTip:'刺会扣血，影子不扣',
     winText:'第 2 关完成——路，可以走两遍。',
     nextLabel:'进入第 3 关',
     introRules:[
       '1. 从这一关起，你身上有了<b>血条</b>：踩到尖刺或坠下深渊，扣掉一格；血量耗尽，整关重来。',
-      '2. <b>B机关</b>牵着升降木板：踩住时木板上下往返，离开即停——先让它替你踩着，你再从容跳上去。'
+      '2. 有一级台阶上钉着<b>尖刺</b>，而它是你往上走的<b>唯一落脚点</b>——跳上去必然掉一格血。<b>影子踩同样的刺，什么都不会发生</b>：这就是你和它最大的不同。',
+      '3. <b>B机关</b>牵着升降木板：踩住时木板上下往返，离开即停——先让它替你踩着，你再从容跳上去。'
     ],
     introTip:'石门要有人一直踩住<b>压力板</b>才开（你或影子都行）；',
     introKeys:'A / D 移动 · 空格 跳跃 · R 释放影子 · F 查看告示 · ESC 暂停'
@@ -1040,11 +1111,12 @@ function parseMap(map, mechs){
   L.portalRaw = {}; L.portals = [];
   L.fakes = []; L.summonCells = []; L.summonGroups = []; L.fakePortals = [];   // 第五关：假机关
   L.springs = []; L.vents = []; L.crumbles = [];      // 第 6 关：弹簧 / 气流 / 脆板
+  L.landTold = false;                                 // 落脚刺的第一次扣血提示只讲一次
   L.blockDefs = {}; L.blockCells = []; L.blockImg = {};   // 自定义装饰图块（编辑器导出的贴纸）
   var dc = [], gc = [];
   var hasX = map.join('').indexOf('X') >= 0;   // 有 X 出口时 G = 收集星星；无 X 时 G 兼容作出口
   /* 图块定义表：字符 → 定义（顺带把上传的图片预加载了） */
-  var BUILTIN_CH = '#-=^~.*T_v_ABCDEFGKPSX123456789';
+  var BUILTIN_CH = '#-=^~.*T_v_ABCDEFGKPSXY123456789';
   if (typeof BLOCKS !== 'undefined' && BLOCKS){
     for (var bi = 0; bi < BLOCKS.length; bi++){
       var bdef = BLOCKS[bi];
@@ -1059,7 +1131,7 @@ function parseMap(map, mechs){
     }
   }
   var unknownCh = {};
-  var KNOWN_CH = '#~-=^*Tv_ABCEFXGKJVm123456789DSP.';   // 游戏认识的全部字符（其余按未定义处理）
+  var KNOWN_CH = '#~-=^*TvY_ABCEFXGKJVm123456789DSP.';   // 游戏认识的全部字符（其余按未定义处理）
   for (var r = 0; r < ROWS; r++){
     var row = [];
     for (var c = 0; c < COLS; c++){
@@ -1072,9 +1144,12 @@ function parseMap(map, mechs){
       if (ch === '~'){ L.bridges.push({ c:c, r:r }); L.bridgeMap[c + ',' + r] = true; }
       if (ch === '-') L.halves[c + ',' + r] = true;   // 半砖(上)：只占上半格
       if (ch === '=') L.halvesB[c + ',' + r] = true;  // 半砖(下)：只占下半格（底边与整砖齐平）
-      if (ch === '^' || ch === '*' || ch === 'T'){
+      if (ch === '^' || ch === '*' || ch === 'T' || ch === 'Y'){
         var s = { x:c*CELL + 3, y:r*CELL + 28, w:CELL - 6, h:CELL - 28 };
         s.hit = { x:s.x + 3, y:s.y + SPIKE_PAD, w:s.w - 6, h:s.h - SPIKE_PAD };   // 只判上半段
+        /* 落脚刺 Y：钉在唯一通路上那块砖的头顶。踩上去照样扣血，但自动跳跃**愿意**把它当落点
+           （spikeAbove 会跳过它），否则玩家会被规划成「从刺上方飞过去」，一血都不会掉。 */
+        if (ch === 'Y') s.land = true;
         L.spikes.push(s);
       }
       if (ch === 'v'){                                 // 半格基座尖刺：底在下格上沿（站在下半砖顶面）
@@ -1083,7 +1158,7 @@ function parseMap(map, mechs){
         L.spikes.push(s2);
       }
       if (L.mech !== 'v2'){                        // v1（第 1/2 关）：A机关/B机关/E 木板旧机制
-        if (ch === '_' || ch === '*') L.plate = { x:c*CELL + 5, y:(r + 1)*CELL - 13, w:CELL - 10, h:13 };   // A机关（刺上机关）→ 控制石门
+        if (ch === '_') L.plate = { x:c*CELL + 5, y:(r + 1)*CELL - 13, w:CELL - 10, h:13 };   // A机关 → 控制石门
         if (ch === 'B') L.plateB = { x:c*CELL + 5, y:(r + 1)*CELL - 13, w:CELL - 10, h:13 };                // B机关 → 控制升降木板
       }
       if (L.mech === 'v2'){
@@ -1245,11 +1320,14 @@ function buildStands(){
     L.stands[c] = arr;
   }
 }
-/* 这一格上方是不是有尖刺（有刺就不算落点，跳过去等于送死） */
+/* 这一格上方是不是有尖刺（有刺就不算落点，跳过去等于送死）
+   ⚠️ 落脚刺（'Y'）例外：它钉在唯一通路那块砖的头顶，玩家只能落上去。
+      排除掉的话自动跳跃会规划成「从刺上方飞过去」，这颗刺等于白放，扣血教学彻底失效。 */
 function spikeAbove(c, r){
   if (!L.spikes) return false;
   for (var i = 0; i < L.spikes.length; i++){
     var s = L.spikes[i];
+    if (s.land) continue;
     var sc = Math.floor((s.x + s.w / 2) / CELL), sr = Math.floor(s.y / CELL);
     if (sc === c && sr === r) return true;
   }
@@ -1270,7 +1348,11 @@ function loadLevel(i){                 // 载入第 i 关（0 起）：解析地
   if (L.actsOn){ L.hintAct = -1; applyActTheme(0); Snd.exitActMode(true); Snd.enterActMode();
     for (var p0 = 0; p0 < L.portals.length; p0++) L.portals[p0].open = true; }   // 第 6 关：传送门默认全开
   else Snd.exitActMode();
-  if (!L.actsOn && !THEME){        // 内置 1~5 关：主题回默认（别把第 6 关的暗色主题带过来）
+  /* 内置 1~5 关：主题回默认（别把第 6 关的三幕配色、或自定义地图的配色带过来）。
+     判据用 def.custom 而不是「THEME 是否为空」——自定义关的 THEME 一直是非空的，
+     按老写法从自定义关回第 1 关会把那张图的配色一起带进去。 */
+  if (!L.actsOn && !def.custom){
+    THEME = null;
     for (var k in THEME_DEFAULT) TH[k] = THEME_DEFAULT[k];
     skyGrad = null;
   }
@@ -1308,12 +1390,48 @@ var Snd = {
   bgmAct:null, actSrc:null, actGain:null, actBufs:[null, null, null], actIdx:-1, actT0:0,
   actLoaded:false, actLoading:false,                       // 第 6 关三幕音频（独立增益，和首页循环曲并存）
   actMode:false,                                           // true = 三幕模式：花日(《花日》BGM)完全停用
+  direct:false,                                            // true = BGM 走直通（不用 Web Audio 图，见 canDirect）
 
+  /* ---- 直通播放：什么时候必须绕开 Web Audio 图 ----
+     createMediaElementSource() 出来的声音只有「媒体与文档同源」时才真的出声：
+       ① 双击本地文件（file://）：Chrome / Edge / Firefox 都把本地媒体当跨源 → 整段静音（taint），
+          而合成 BGM 这时已经让位（synth.gain=0）→ 结果一点声音都没有。原注释里
+          「file:// 双击打开同样能响」是错的，只有直通才响。
+       ② 没有 Web Audio（老浏览器 / 部分 App 内置 webview）：init 直接 return，startBgm 全部早退，
+          mp3 也放不出来。
+     这两种情况统一走直通：只用 <audio> 元素本身 + el.volume 调音量。 */
+  canDirect: function(){
+    if (!this.ready) return true;
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    /* 音源跨域（以后若把 audio/ 挪到 CDN 或另一个域名）同样会被判污染而静音 —— 也走直通 */
+    if (BGM_SRC && /^https?:/i.test(BGM_SRC)){
+      try { if (new URL(BGM_SRC, location.href).origin !== location.origin) return true; } catch(e){}
+    }
+    return false;
+  },
+  /* 直通模式的音量渐变（步进式，不依赖 Web Audio 的 gain 自动化） */
+  fadeTo: function(el, to, steps){
+    if (!el) return;
+    steps = steps || 12;
+    if (el._fv){ clearInterval(el._fv); el._fv = null; }
+    var from = el.volume, i = 0;
+    el._fv = setInterval(function(){
+      i++;
+      var k = Math.min(1, i / steps);
+      try { el.volume = Math.max(0, Math.min(1, from + (to - from) * k)); } catch(e){}
+      if (k >= 1){ clearInterval(el._fv); el._fv = null; }
+    }, 33);
+  },
   init: function(){
     if (this.ctx) return;
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    var c = this.ctx = new AC();
+    /* 有些内置 webview 里 AudioContext 能构造但一用就抛，包一层：
+       抛了就当作「没有 Web Audio」，BGM 走直通（见 canDirect），音效静音，页面照常能玩 */
+    var c;
+    try { c = new AC(); } catch(e){ return; }
+    this.ctx = c;
     this.master = c.createGain(); this.master.gain.value = 1.0;
     this.master.connect(c.destination);
     var dly = c.createDelay(1.2); dly.delayTime.value = 0.34;
@@ -1351,7 +1469,7 @@ var Snd = {
   loadBgm: function(done){            // 加载曲目文件（audio/bgm.mp3）；失败/超时则沿用合成 BGM
     var self = this;
     done = done || function(){};
-    if (!this.ctx || !BGM_SRC || typeof Audio !== 'function'){ done(); return; }
+    if (!BGM_SRC || typeof Audio !== 'function'){ done(); return; }
     var finished = false;
     var finish = function(){ if (finished) return; finished = true; done(); };
     var guard = setTimeout(finish, 3000);          // 加载超过 3 秒 → 先用合成 BGM，不干等
@@ -1361,6 +1479,16 @@ var Snd = {
       var ok = function(){
         if (finished) return;
         clearTimeout(guard);
+        self.direct = self.canDirect();
+        if (self.direct){                                     // 直通：元素自己出声（file:// / 无 Web Audio）
+          try { el.volume = 0.0001; } catch(e){}
+          self.bgmBuf = el; self.bgmVol = 0.26;
+          if (self.ready && self.synth) self.synth.gain.value = 0;   // 曲目就位：合成层让位
+          if (self.timer){ clearInterval(self.timer); self.timer = null; }
+          self.startBgm();
+          finish();
+          return;
+        }
         try {
           var node = self.ctx.createMediaElementSource(el);   // 接进音频图：mute/暂停才管得住
           node.connect(self.bgm);
@@ -1368,11 +1496,11 @@ var Snd = {
           self.synth.gain.value = 0;                          // 真曲目就位：合成层让位
           if (self.timer){ clearInterval(self.timer); self.timer = null; }
           self.startBgm();                                    // 晚于 startBgm 加载完：立刻接管
-        } catch(e){ self.bgmBuf = null; }
+        } catch(e){ self.bgmBuf = null; self.direct = false; }
         finish();
       };
       el.addEventListener('canplay', ok, { once:true });
-      el.addEventListener('error', function(){ clearTimeout(guard); self.bgmBuf = null; finish(); }, { once:true });
+      el.addEventListener('error', function(){ clearTimeout(guard); self.bgmBuf = null; self.direct = false; finish(); }, { once:true });
       el.src = BGM_SRC;
     } catch(e){ clearTimeout(guard); this.bgmBuf = null; finish(); }
   },
@@ -1380,8 +1508,9 @@ var Snd = {
   enterActMode: function(){
     this.actMode = true;                                          // 三幕模式：花日彻底让位（不是压音量，是真的停）
     if (this.bgmSrc){ try { this.bgmSrc.pause(); } catch(e){} this.bgmSrc = null; }
+    if (this.bgmBuf){ try { this.bgmBuf.pause(); } catch(e){} }     // 直通时元素还挂着，也要停
     if (this.timer){ clearInterval(this.timer); this.timer = null; }
-    if (!this.ready) return;
+    if (!this.ready || this.canDirect()){ this.loadActs(); return; }   // 直通：三幕曲也走元素直放
     var t = this.ctx.currentTime;
     this.bgm.gain.cancelScheduledValues(t);
     this.bgm.gain.setValueAtTime(0, t);                           // 直接归零，不留残响
@@ -1392,7 +1521,14 @@ var Snd = {
   },
   exitActMode: function(noBgm){                                  // noBgm: 紧接着还要 enterActMode，别放花日
     this.actMode = false;
-    if (this.ready){
+    if (this.ready && this.direct){
+      var da = this.actSrc;
+      this.actSrc = null; this.actGain = null; this.actIdx = -1;
+      if (da){
+        this.fadeTo(da.el, 0.0001, 8);
+        setTimeout(function(){ try { da.el.pause(); } catch(e){} }, 320);
+      }
+    } else if (this.ready){
       if (this.actSrc){ try { this.actSrc.el.pause(); } catch(e){} this.actSrc = null; this.actGain = null; }
       this.actIdx = -1;
       var t = this.ctx.currentTime;
@@ -1404,6 +1540,16 @@ var Snd = {
   },
   /* 通关：歌立刻收住，不等它自己放完（1.1s 淡出后 stop 掉源） */
   stopActMusic: function(sec){
+    if (this.ready && this.direct){
+      var dt = this.actSrc;
+      this.actSrc = null; this.actGain = null; this.actIdx = -1;
+      if (dt){
+        var ds = sec || 1.1;
+        this.fadeTo(dt.el, 0.0001, Math.max(4, Math.round(ds * 20)));
+        setTimeout(function(){ try { dt.el.pause(); } catch(e){} }, ds * 1000 + 80);
+      }
+      return;
+    }
     if (!this.ready) return;
     var t = this.ctx.currentTime, d = sec || 1.1;
     this.bgmAct.gain.cancelScheduledValues(t);
@@ -1414,7 +1560,7 @@ var Snd = {
     if (tr) setTimeout(function(){ try { tr.el.pause(); } catch(e){} }, d * 1000 + 80);
   },
   loadActs: function(){
-    if (!this.ctx || this.actLoading || this.actLoaded) return;
+    if (this.actLoading || this.actLoaded) return;
     if (typeof BGM_SRC_L6 === 'undefined' || !BGM_SRC_L6) return;
     if (typeof Audio !== 'function'){ this.actLoaded = true; return; }
     this.actLoading = true;
@@ -1434,12 +1580,18 @@ var Snd = {
         var el = new Audio();
         el.loop = true; el.preload = 'auto';       // 循环：换幕只认幕门，歌不能先断
         var ok = function(){
-          try {
-            var node = self.ctx.createMediaElementSource(el);
-            var g = self.ctx.createGain(); g.gain.value = 0.0001;   // 每轨独立增益：换幕交叉淡化用
-            node.connect(g); g.connect(self.bgmAct);
-            self.actBufs[i] = { el: el, node: node, gain: g };
-          } catch(e){}
+          var dir = self.canDirect();                               // 直通：不接图，元素自己出声
+          if (dir){
+            try { el.volume = 0.0001; } catch(e){}
+            self.actBufs[i] = { el: el, node: null, gain: null, direct: true };
+          } else {
+            try {
+              var node = self.ctx.createMediaElementSource(el);
+              var g = self.ctx.createGain(); g.gain.value = 0.0001;   // 每轨独立增益：换幕交叉淡化用
+              node.connect(g); g.connect(self.bgmAct);
+              self.actBufs[i] = { el: el, node: node, gain: g };
+            } catch(e){}
+          }
           doneOne();
         };
         el.addEventListener('canplay', ok, { once:true });
@@ -1463,9 +1615,22 @@ var Snd = {
     });
   },
   playAct: function(i){
-    if (!this.ready) return;
     var tr = this.actBufs[i];
     if (!tr) return;                     // 还没加载好：静音跑图；加载完 ensureActMusic 会再调一次
+    if (tr.direct){                      // 直通：元素直放 + 音量渐变交叉淡化
+      if (this.actIdx === i && this.actSrc && !this.actSrc.el.paused) return;
+      var oldD = this.actSrc;
+      this.actIdx = i; this.actSrc = tr;
+      try { tr.el.currentTime = 0; tr.el.volume = 0.0001; } catch(e){}
+      try { tr.el.muted = !!this.bgmMuted; var pp = tr.el.play(); if (pp && pp.catch) pp.catch(function(){}); } catch(e){}
+      this.fadeTo(tr.el, 0.42, 16);
+      if (oldD && oldD !== tr && oldD.direct){
+        this.fadeTo(oldD.el, 0.0001, 16);
+        setTimeout(function(){ try { oldD.el.pause(); } catch(e){} }, 620);
+      }
+      return;
+    }
+    if (!this.ready) return;
     if (this.actIdx === i && this.actSrc && !this.actSrc.el.paused) return;   // 同一首已经在唱：别重头再来
     var t = this.ctx.currentTime;
     var old = this.actSrc;
@@ -1491,6 +1656,10 @@ var Snd = {
   },
   actReady: function(){ return !!this.actBufs[this.actIdx]; },
   fadeActOut: function(sec){                       // 抢跑换幕：把本幕快速淡出，别硬切
+    if (this.ready && this.direct){
+      if (this.actSrc) this.fadeTo(this.actSrc.el, 0.0001, Math.max(4, Math.round((sec || 0.5) * 20)));
+      return;
+    }
     if (!this.ready) return;
     var t = this.ctx.currentTime;
     this.bgmAct.gain.cancelScheduledValues(t);
@@ -1499,6 +1668,16 @@ var Snd = {
   },
   startBgm: function(){
     if (this.actMode) return;                      // 第 6 关：花日不许插队
+    if (this.direct && this.bgmBuf){               // 直通：<audio> 自己出声，音量也自己管
+      var dEl = this.bgmBuf;
+      try {
+        if (dEl.paused){ dEl.currentTime = 0; dEl.volume = 0.0001; var dp = dEl.play(); if (dp && dp.catch) dp.catch(function(){}); }
+        dEl.muted = !!this.bgmMuted;
+        this.fadeTo(dEl, this.bgmVol, 14);
+      } catch(e){}
+      this.bgmSrc = dEl;
+      return;
+    }
     if (!this.ready) return;
     var t = this.ctx.currentTime;
     this.bgm.gain.cancelScheduledValues(t);
@@ -1519,6 +1698,13 @@ var Snd = {
     }
   },
   stopBgm: function(){
+    if (this.direct && this.bgmBuf){
+      var db = this.bgmBuf;
+      this.fadeTo(db, 0.0001, 10);
+      setTimeout(function(){ try { db.pause(); } catch(e){} }, 380);
+      this.bgmSrc = null;
+      return;
+    }
     if (!this.ready) return;
     if (this.timer){ clearInterval(this.timer); this.timer = null; }
     if (this.bgmSrc){                                // 曲目与淡出同步停下
@@ -1532,8 +1718,13 @@ var Snd = {
     this.bgm.gain.linearRampToValueAtTime(0.0001, t + 0.7);
   },
   mute: function(on){                               // 暂停静音：只压增益，循环继续（解除后无缝续听）
-    if (!this.ready) return;
     this.bgmMuted = !!on;
+    if (this.direct){                               // 直通：用 muted 静音，循环照跑（iOS 上 volume 无效）
+      var dm = this.actMode ? (this.actSrc && this.actSrc.el) : this.bgmBuf;
+      if (dm) dm.muted = !!on;
+      return;
+    }
+    if (!this.ready) return;
     var t = this.ctx.currentTime;
     if (this.actMode){                              // 第 6 关：静音对象是三幕曲
       this.bgmAct.gain.cancelScheduledValues(t);
@@ -1547,6 +1738,10 @@ var Snd = {
   },
   duck: function(on){
     if (this.actMode) return;
+    if (this.direct){
+      if (this.bgmBuf && !this.bgmMuted) this.fadeTo(this.bgmBuf, on ? this.bgmVol * 0.4 : this.bgmVol, 8);
+      return;
+    }
     if (!this.ready) return;
     var t = this.ctx.currentTime;
     this.bgm.gain.cancelScheduledValues(t);
@@ -1555,6 +1750,10 @@ var Snd = {
   },
   walkDuck: function(on){
     if (this.actMode) return;
+    if (this.direct){
+      if (this.bgmBuf && !this.bgmMuted) this.fadeTo(this.bgmBuf, on ? this.bgmVol * 0.35 : this.bgmVol, 5);
+      return;
+    }
     if (!this.ready) return;
     var t = this.ctx.currentTime;
     this.bgm.gain.cancelScheduledValues(t);
@@ -1925,8 +2124,19 @@ function takeDamage(){               // 扣一格血：判断是"自己能走开
   fogFreeze();                       // 这一条命在雾里走过的路 → 冻结成荧光线，下一次替你指路
   Snd.reset(); flash = 0.8;
   if (hp <= 0){ openDeadPanel(); return; }
+  /* 这一下多半是关卡设计好的「课」：踩到刺 = 你会流血。第一次换个说法，把话讲明白。 */
+  var onLand = null;
+  for (var li = 0; li < L.spikes.length; li++)
+    if (L.spikes[li].land && overlap(player, L.spikes[li].hit)){ onLand = L.spikes[li]; break; }
   if (hasGroundNear(player.x, player.y, player.w, player.h)){
-    toast('踩到尖刺，失去一格血 —— 自己走开');   // 平地刺：留在原地，玩家自己操作离开
+    if (onLand && !L.landTold){
+      L.landTold = true;
+      toast('这一格躲不开 —— 尖刺咬掉你一格血。你和影子最大的不同：它踩上去什么都没有。');
+    } else if (onLand){
+      toast('砖头缝里都是刺，踩一次掉一格血');
+    } else {
+      toast('踩到尖刺，失去一格血 —— 自己走开');   // 平地刺：留在原地，玩家自己操作离开
+    }
   } else {                                        // 坑里没有落脚点，跳不出来 → 退回上一步
     respawn();
     hurtOn = false;
@@ -2254,6 +2464,7 @@ function nearSign(){                  // 返回最近的那块告示牌（没有
 }
 window.addEventListener('keydown', function(e){
   if (e.code === 'Escape'){
+    if (elDel && !elDel.classList.contains('hidden')){ closeDel(); e.preventDefault(); return; }
     if (state === 'dialog') closeSignDialog();
     else togglePause();
     e.preventDefault(); return;
@@ -2821,10 +3032,13 @@ function win(){
     winText.textContent += '（星星 ' + L.starsGot + ' / ' + L.stars.length + '）';
   if (def.nextLabel){ btnWinNext.style.display = ''; btnWinNext.textContent = def.nextLabel; }
   else btnWinNext.style.display = 'none';
-  /* 进度记忆：通关即记录并解锁下一关（存本设备 localStorage） */
-  if (prog.passed.indexOf(curLevel) < 0) prog.passed.push(curLevel);
-  if (curLevel + 1 < LEVELS.length && prog.unlocked < curLevel + 1) prog.unlocked = curLevel + 1;
-  progSave();
+  /* 进度记忆：通关即记录并解锁下一关（存本设备 localStorage）。
+     自定义地图不写进度——它不是正式关卡，不该影响内置解锁链。 */
+  if (!def.custom){
+    if (prog.passed.indexOf(curLevel) < 0) prog.passed.push(curLevel);
+    if (curLevel + 1 < LEVELS.length && prog.unlocked < curLevel + 1) prog.unlocked = curLevel + 1;
+    progSave();
+  }
   elWin.classList.remove('hidden');
 }
 
@@ -4425,13 +4639,76 @@ function fit(){
 window.addEventListener('resize', fit);
 
 /* =====================================================================
-   地图导入（编辑器直连）——两条路，最终都走 parseImported → applyImported：
-   ① 编辑器「发送到游戏」：写 localStorage 收件箱 + 自动打开本文件；
-      启动时 checkInbox() 检测到就弹「一键载入」。
-   ② 选关界面「导入地图」：粘编辑器导出的整段文本，立即开玩。
+   地图导入（编辑器直连）——本地「我的地图」三个存档位
+   ① 编辑器「发送到游戏」把包写进收件箱（delayed_echo_inbox）
+      → 游戏启动时 checkInbox() 自动把它搬进空存档位并长期保留
+      → 选关页底部直接出现这一关，可以反复进（不再是一次性弹窗）。
+   ② 选关页「导入地图」：粘编辑器导出的整段文本 → 存空位 + 立刻开玩。
+   存档靠 localStorage（同源 + 同设备 + 同浏览器），换设备/换浏览器读不到；
+   跨设备搬运请走「下载 .txt」→「导入地图」粘文本。
    ===================================================================== */
 var INBOX_KEY = 'delayed_echo_inbox';
-var importedIdx = -1;               // 导入关在 LEVELS 里的下标（重复导入替换，不堆积）
+var SLOT_KEY  = 'delayed_echo_slots';        // 三个自定义地图存档位（持久，无过期）
+var SLOT_N    = 3;
+var SLOT_NO   = ['①', '②', '③'];
+function slotLoad(){
+  var arr = null;
+  try { arr = JSON.parse(localStorage.getItem(SLOT_KEY) || 'null'); } catch (e){}
+  var fix = [];
+  for (var i = 0; i < SLOT_N; i++){
+    var r = (arr && arr[i]) || null;
+    fix.push(r && r.map && r.map.length ? r : null);   // 坏数据当空位，别让一条脏记录拖垮整页
+  }
+  return fix;
+}
+var SLOTS = slotLoad();
+function slotSave(){
+  try { localStorage.setItem(SLOT_KEY, JSON.stringify(SLOTS)); return true; }
+  catch (e){ toast('本机存储写不下了（多半已满）——先删一个存档位，或改用「下载 .txt」'); return false; }
+}
+function slotFree(){ for (var i = 0; i < SLOT_N; i++) if (!SLOTS[i]) return i; return -1; }
+function slotPut(pkg, at){                   // 存到指定位（编辑器可选）；不指定则找第一个空位。全满返回 -1
+  if (!pkg || !pkg.map || !pkg.map.length) return -1;
+  var i = (typeof at === 'number' && at >= 0 && at < SLOT_N) ? at : slotFree();
+  if (i < 0) return -1;
+  var rec = {
+    t: Date.now(), name: pkg.name || '自定义', map: pkg.map.map(function(r){ return String(r); }),
+    mechs: pkg.mechs || [], blocks: pkg.blocks || [], theme: pkg.theme || null, h: pkg.map.length, w: 0
+  };
+  for (var k = 0; k < rec.map.length; k++) rec.w = Math.max(rec.w, rec.map[k].length);
+  var old = SLOTS[i];
+  SLOTS[i] = rec;
+  if (!slotSave()){ SLOTS[i] = old; return -1; }     // 配额满 → 回滚，不留假象
+  return i;
+}
+function slotDrop(i){
+  if (!SLOTS[i]) return;
+  SLOTS[i] = null; slotSave(); buildSlotList();
+  toast('存档位 ' + SLOT_NO[i] + ' 已清空');
+}
+/* ---- 删除确认弹窗：把「要删哪一张」摆到玩家眼前，默认焦点在「取消」 ---- */
+var delIdx = -1;
+function escH(s){                     // 图名来自编辑器，进 innerHTML 前先转义
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function askDropSlot(i){
+  var rec = SLOTS[i];
+  if (!rec) return;
+  delIdx = i;
+  var nm = '「我的地图 ' + SLOT_NO[i] + (rec.name && rec.name !== '自定义' ? ' · ' + rec.name : '') + '」';
+  $('delWho').innerHTML = '确定要删掉<b>' + escH(nm) + '</b>吗？'
+    + '<i>' + rec.w + '×' + rec.h + ' · ' + slotTime(rec.t) + '</i>';
+  elDel.classList.remove('hidden');
+  try { $('btnDelNo').focus(); } catch (e){}    // 默认焦点在「取消」，顺手回车也不会删
+}
+function closeDel(){
+  elDel.classList.add('hidden');
+  delIdx = -1;
+}
+function slotTime(t){
+  var d = new Date(t || Date.now()), p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' 存入';
+}
 function parseImported(txt){
   var fn;
   try {
@@ -4448,7 +4725,8 @@ function parseImported(txt){
   pkg.map = pkg.map.map(function(r){ return String(r); });
   return pkg;
 }
-function applyImported(pkg){
+var customIdx = -1;                  // 自定义地图在 LEVELS 里占的固定一格（反复打开只替换，不堆积）
+function applyImported(pkg, titleOverride){
   if (!pkg) return false;
   var rows = pkg.map.length, w = 0, i;
   for (i = 0; i < rows; i++) w = Math.max(w, pkg.map[i].length);
@@ -4456,24 +4734,25 @@ function applyImported(pkg){
   applyTheme(pkg.theme);            // 主题先应用（render 读 TH）
   setBlocks(pkg.blocks || [], true);   // 图块必须在 loadLevel 之前（parseMap 读 BLOCKS）；合并保留内置
   var lv = {
-    title:'导入地图' + (pkg.name && pkg.name !== '自定义' ? ' · ' + pkg.name : ''),
+    custom: true,                   // 标记：不算正式关卡（选关列表跳过、不写通关进度）
+    title: titleOverride || ('导入地图' + (pkg.name && pkg.name !== '自定义' ? ' · ' + pkg.name : '')),
     sub:'来自地图编辑器（' + w + '×' + rows + '）',
     hp:2, map:pkg.map, mechs:pkg.mechs || [], mech:'v2',
     signText:'这是一张从地图编辑器导入的地图。',
     spikeTip:'尖刺扣 1 格血；断桥会被影子踩碎',
-    winText:'导入地图完成！',
+    winText:'这张地图走完啦！',
     nextLabel:null,
     introRules:[
-      '1. 这张地图由<b>地图编辑器</b>制作并直接导入——地形、机关、贴纸、配色都与编辑器里一致。',
+      '1. 这张地图由<b>地图编辑器</b>制作并存在本机——地形、机关、贴纸、配色都与编辑器里一致。',
       '2. 机关走<b>装置绑定表</b>：开关踩一下切换、再踩复位；传送门要开关唤醒，唤醒后永久敞开。',
       '3. <b>断桥</b>只认你的脚步——影子踩上去，桥就会碎。',
-      '4. 想改这张地图？回编辑器改完再「发送到游戏」即可。'
+      '4. 想改这张地图？回编辑器改完再「发送到游戏」，会覆盖你选的那个存档位。'
     ],
     introTip:'集齐钥匙出口才会打开；开关唤醒传送门与木板；',
     introKeys:'A / D 移动 · 空格 跳跃 · R 释放影子 · F 查看告示 · ESC 暂停'
   };
-  if (importedIdx >= 0 && LEVELS[importedIdx]) LEVELS[importedIdx] = lv;
-  else { LEVELS.push(lv); importedIdx = LEVELS.length - 1; }
+  if (customIdx >= 0 && LEVELS[customIdx]) LEVELS[customIdx] = lv;
+  else { LEVELS.push(lv); customIdx = LEVELS.length - 1; }
   return true;
 }
 function applyTheme(t){             // 主题缺失字段逐个回退默认（老关卡 = 原配色）
@@ -4490,6 +4769,54 @@ function setBlocks(arr, merge){    // 注入图块定义（导入用；必须在
     BLOCKS = Object.keys(ex).map(function(k){ return ex[k]; });
   } else BLOCKS = arr || [];
 }
+/* ---- 选关页：三个存档位 ---- */
+function buildSlotList(){
+  if (!slotList) return;
+  slotList.innerHTML = '';
+  for (var i = 0; i < SLOT_N; i++){
+    var rec = SLOTS[i];
+    var row = document.createElement('div');
+    row.id = 'slot_' + i;
+    row.className = 'slot-row ' + (rec ? 'filled' : 'empty');
+    var name = document.createElement('div'); name.className = 'slot-name';
+    var b = document.createElement('b'), it = document.createElement('i');
+    if (rec){
+      b.textContent = '我的地图 ' + SLOT_NO[i] + (rec.name && rec.name !== '自定义' ? ' · ' + rec.name : '');
+      it.textContent = rec.w + '×' + rec.h + ' · ' + slotTime(rec.t);
+      var ops = document.createElement('div'); ops.className = 'slot-ops';
+      var go = document.createElement('span'); go.className = 'slot-go'; go.textContent = '进 入';
+      var del = document.createElement('span'); del.className = 'slot-del'; del.textContent = '删 除';
+      (function(idx){
+        go.addEventListener('click', function(ev){
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          openSlot(idx);
+        });
+        /* 删除走独立确认弹窗：点「删 除」只弹窗，弹窗里再点「确认删除」才真删 */
+        del.addEventListener('click', function(ev){
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          askDropSlot(idx);
+        });
+        row.addEventListener('click', function(){ openSlot(idx); });   // 点整行也能进
+      })(i);
+      ops.appendChild(go); ops.appendChild(del);
+      name.appendChild(b); name.appendChild(it);
+      row.appendChild(name); row.appendChild(ops);
+    } else {
+      b.textContent = '空 位 ' + SLOT_NO[i];
+      it.textContent = '在地图编辑器里做好图，点「发送到游戏」就会存到这里';
+      name.appendChild(b); name.appendChild(it);
+      row.appendChild(name);
+    }
+    slotList.appendChild(row);
+  }
+}
+function openSlot(i){                // 从存档位进入：套用主题/图块 → 建关 → 开玩
+  var rec = SLOTS[i];
+  if (!rec) return;
+  var t = '我的地图 ' + SLOT_NO[i] + (rec.name && rec.name !== '自定义' ? ' · ' + rec.name : '');
+  if (!applyImported(rec, t)){ toast('这张地图超出 100×100 上限，打不开'); return; }
+  startGame(customIdx);
+}
 function inboxGet(){                // 收件箱：7 天内有效
   try {
     var d = JSON.parse(localStorage.getItem(INBOX_KEY) || 'null');
@@ -4498,17 +4825,31 @@ function inboxGet(){                // 收件箱：7 天内有效
   return null;
 }
 function inboxClear(){ try { localStorage.removeItem(INBOX_KEY); } catch (e){} }
-function checkInbox(){
+function checkInbox(){              // 编辑器发来 → 自动落进存档位（有空位就不打扰玩家）
   var d = inboxGet();
   if (!d) return;
+  var want = (typeof d.slot === 'number' && d.slot >= 0 && d.slot < SLOT_N) ? d.slot : slotFree();
+  if (want >= 0){
+    var i = slotPut(d, want);
+    if (i >= 0){
+      inboxClear(); buildSlotList();
+      toast('地图已存入「我的地图 ' + SLOT_NO[i] + '」——选关页可以直接进');
+      return;
+    }
+    $('inboxInfo').innerHTML = '地图编辑器发来一张 <b>' + d.map.length + '×' + (d.map[0] || '').length
+      + '</b> 的地图，但本机存储写不进去了（可能已满）。可以先玩一次，或删掉一个存档位再发一次。';
+    elInbox.classList.remove('hidden');
+    return;
+  }
+  /* 三个都满了：绝不静默覆盖——把选择权交回玩家 */
   $('inboxInfo').innerHTML = '地图编辑器发来一张 <b>' + d.map.length + '×' + (d.map[0] || '').length
     + '</b> 的地图' + (d.name && d.name !== '自定义' ? '（风格：<b>' + String(d.name).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</b>）' : '')
-    + '，现在载入吗？';
+    + '，但三个存档位都满了。<br>可以先载入玩一次；或在选关页删掉一个旧存档，再回编辑器发一次。';
   elInbox.classList.remove('hidden');
 }
 /* ---- 导入界面按钮 ---- */
 $('btnImport').onclick = function(){
-  $('impHint').textContent = inboxGet() ? '（收件箱里还有一张刚发来的，也可以直接重启游戏一键载入）' : '';
+  $('impHint').textContent = '粘完会存进「我的地图」空位，之后在选关页随时能进';
   elImport.classList.remove('hidden');
 };
 $('btnImpCancel').onclick = function(){ elImport.classList.add('hidden'); };
@@ -4517,20 +4858,29 @@ $('btnImpOk').onclick = function(){
   if (!pkg){ $('impHint').textContent = '没解析出地图：确认粘的是编辑器导出的整段（var MAP = [...] 开头）'; return; }
   if (!applyImported(pkg)){ $('impHint').textContent = '地图超出 100×100 上限'; return; }
   elImport.classList.add('hidden');
-  startGame(importedIdx);
+  var i = slotPut(pkg);                 // 顺手存进空位：粘一次就能长期在选关页看到
+  startGame(customIdx);
+  toast(i >= 0 ? '已存进「我的地图 ' + SLOT_NO[i] + '」，下次打开还在'
+               : '三个存档位都满了：这次只是临时玩，没有存档');
 };
 $('btnInboxOk').onclick = function(){
   var d = inboxGet();
   elInbox.classList.add('hidden'); inboxClear();
-  if (d && applyImported(d)) startGame(importedIdx);
+  if (d && applyImported(d)) startGame(customIdx);
 };
-/* 点「暂 不」= 这次不载入 → 连收件箱一起清掉。
-   否则数据留在 localStorage 里，下次进游戏 checkInbox() 又会弹同一个框。 */
 $('btnInboxNo').onclick = function(){
   elInbox.classList.add('hidden');
   inboxClear();
   var h = $('impHint'); if (h) h.textContent = '';
 };
+/* ---- 删除确认弹窗按钮 ---- */
+$('btnDelOk').onclick = function(){
+  var i = delIdx;
+  closeDel();
+  if (i >= 0) slotDrop(i);
+};
+$('btnDelNo').onclick = closeDel;
+elDel.addEventListener('click', function(e){ if (e.target === elDel) closeDel(); });   // 点遮罩空白处 = 取消
 
 /* =====================================================================
    首页入场动画（原生 JS + CSS；效果对标 React Bits 的
@@ -4857,7 +5207,10 @@ checkInbox();                           // 编辑器「发送到游戏」发来�
 /* 自动播放策略：加载时起声若被浏览器拦下（ctx=suspended），
    任意一次用户操作（点击 / 按键 / 触摸 / 移动）都会补起；起来之前不摘监听，并留一条兜底重试 */
 var bgmRetry = null;
-function bgmRunning(){ return !!(Snd.ctx && Snd.ctx.state === 'running'); }
+function bgmRunning(){
+  if (Snd.direct) return !!(Snd.bgmBuf && !Snd.bgmBuf.paused);      // 直通：元素在放就算有声音
+  return !!(Snd.ctx && Snd.ctx.state === 'running');
+}
 function unlockBgm(){
   ensureBgm();
   if (!bgmRunning()) return;                 // 还没起来：继续等下一次操作
@@ -4947,12 +5300,17 @@ window.__echo = {
   get th(){ return TH; },                            // 测试：当前生效配色
   inboxGet: inboxGet, inboxClear: inboxClear,        // 测试：收件箱读写
   checkInbox: checkInbox,                            // 测试：收件箱弹窗检测
+  get slots(){ return SLOTS; },                      // 测试：三个存档位内容
+  slotPut: slotPut, slotDrop: slotDrop, slotFree: slotFree,  // 测试：存档位增删
+  buildSlotList: buildSlotList, openSlot: openSlot,  // 测试：存档位列表 / 进入
+  get customIdx(){ return customIdx; },              // 测试：自定义关在 LEVELS 的位置
   get jumpCfg(){ return { vy:JUMP_VY, vx:JUMP_VX, g:GRAVITY }; },
   makeShadow: makeShadow,
   showSelect: showSelect,
   startGame: startGame,
   loadLevel: loadLevel,
   nearSign: nearSign,
+  spikeAbove: spikeAbove,                        // 测试：自动跳跃的「禁落」判定（落脚刺应返回 false）
   update: update,
   render: render,
   releaseShadow: releaseShadow,
