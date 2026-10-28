@@ -293,7 +293,7 @@
     <div class="slot-head">我 的 地 图 · 三 个 存 档 位</div>
     <div class="slot-list" id="slotList"></div>
     <p class="sel-tip" id="selTip">测试模式：全部关卡可直接进入</p>
-    <button id="btnImport" class="sel-back" style="margin-bottom:6px;padding:7px 18px;font-size:12.5px">导入地图编辑器发来的地图</button>
+    <button id="btnImport" class="sel-back" style="margin-bottom:6px;padding:7px 18px;font-size:12.5px">导入自制地图（粘贴 .txt）</button>
     <button id="btnSelBack" class="sel-back">返 回</button>
   </div>
 </section>
@@ -303,10 +303,11 @@
   <div class="panel">
     <div class="panel-title">导 入 地 图</div>
     <div class="rules">
-      <p class="tip">把地图编辑器导出的整段文本（<b>var MAP / MECH / BLOCKS / THEME</b>）粘到下面，立即开玩。</p>
+      <p class="tip">别人发你的地图是<b>一个 .txt 文件</b>。用记事本打开它，<b>Ctrl+A 全选</b> → <b>Ctrl+C 复制</b>，粘到下面，点「开始玩」。</p>
+      <p class="tip" style="opacity:.75">整个文件从头到尾都要复制，不要只挑中间几行。</p>
       <p class="tip" id="impHint" style="color:#a8842c"></p>
     </div>
-    <textarea id="impText" spellcheck="false" placeholder="var MAP = [&#10;  '#####',&#10;  ...&#10;];&#10;var MECH = [...];"></textarea>
+    <textarea id="impText" spellcheck="false" placeholder="把 .txt 里的全部内容粘到这里&#10;（应该长这样：/* 延时回响 · 自制地图 … */ 然后 var MAP = [ '####', … ];）"></textarea>
     <div class="ops" style="display:flex;gap:10px;justify-content:center;margin-top:10px">
       <button id="btnImpOk" class="btn">开始玩</button>
       <button id="btnImpCancel" class="btn">取 消</button>
@@ -4709,6 +4710,27 @@ function slotTime(t){
   var d = new Date(t || Date.now()), p = function(n){ return (n < 10 ? '0' : '') + n; };
   return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' 存入';
 }
+/* 导入失败时告诉玩家「到底哪种原因」——统一一句「没解析出地图」等于什么都没说：
+   人家明明照做了，看到那句只会更懵。三种情况分开讲。 */
+var IMPORT_TIP = {
+  empty  : '还没粘东西 —— 用记事本打开那个 .txt，Ctrl+A 全选、Ctrl+C 复制，再粘到这里。',
+  nomap  : '这段文字里找不到地图数据（应该包含 var MAP = [ … ] 那一段）—— 大概率只复制了半截，回去整份全选。',
+  syntax : '这段地图数据没写完（引号或括号少了一个）—— 多半是复制时截断了，回去整份重新全选复制。',
+  runtime: '这份地图数据里有写错的地方（比如某个名字少了引号），游戏读不了 —— 请作者在编辑器里重新「下载 .txt」再发你一份。',
+  shape  : '地图数据格式不对（不是字符地图）—— 让作者重新导出一次。'
+};
+function importReason(txt){
+  var t = String(txt || '');
+  if (!t.replace(/\s/g, '')) return 'empty';
+  if (t.indexOf('var MAP') < 0) return 'nomap';
+  /* ⚠️ 光「能编译」不够：编辑器老版本漏引号导出的 name:米白 是**运行时**才炸的
+     （米白 是个合法标识符），只编译的话会误判成 ok，玩家最后看到「格式不对」。
+     所以这里也要真跑一次，和游戏端 parseImported 用完全相同的执行方式。 */
+  var fn;
+  try { fn = new Function(t); } catch(e){ return 'syntax'; }
+  try { fn(); } catch(e){ return 'runtime'; }
+  return 'ok';
+}
 function parseImported(txt){
   var fn;
   try {
@@ -4854,9 +4876,12 @@ $('btnImport').onclick = function(){
 };
 $('btnImpCancel').onclick = function(){ elImport.classList.add('hidden'); };
 $('btnImpOk').onclick = function(){
-  var pkg = parseImported($('impText').value);
-  if (!pkg){ $('impHint').textContent = '没解析出地图：确认粘的是编辑器导出的整段（var MAP = [...] 开头）'; return; }
-  if (!applyImported(pkg)){ $('impHint').textContent = '地图超出 100×100 上限'; return; }
+  var raw = $('impText').value;
+  var why = importReason(raw);
+  if (why !== 'ok'){ $('impHint').textContent = IMPORT_TIP[why]; return; }
+  var pkg = parseImported(raw);
+  if (!pkg){ $('impHint').textContent = IMPORT_TIP.shape; return; }
+  if (!applyImported(pkg)){ $('impHint').textContent = '这张地图超过 100×100 上限，游戏放不下'; return; }
   elImport.classList.add('hidden');
   var i = slotPut(pkg);                 // 顺手存进空位：粘一次就能长期在选关页看到
   startGame(customIdx);
@@ -5272,6 +5297,7 @@ window.__echo = {
   trapped: trapped,                                 // 测试：彻底围困检测
   get fakePortals(){ return L.fakePortals; },      // 测试：第五关假传送门
   cellOccupied: cellOccupied,
+  importReason: importReason,                       // 测试：导入失败的原因判定（empty/nomap/syntax/ok）
   /* 第 6 关测试钩子 */
   get lv6(){ return { actIdx:L.actIdx, actsOn:L.actsOn, morph:morph, whiten:whiten, goal:L.goal, stars:L.stars, starsGot:L.starsGot,
                       springs:L.springs, vents:L.vents, crumbles:L.crumbles, spikes:L.spikes, signs:L.signs, cols:COLS, rows:ROWS }; },
