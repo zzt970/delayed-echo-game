@@ -437,6 +437,11 @@
     body.touch .slot-head{ margin:9px 0 6px; font-size:10.5px; }
     body.touch .sel-tip{ font-size:11px; margin:6px 0 0; }
     body.touch #btnImport{ margin-top:8px !important; padding:8px 14px; font-size:12px; }
+  body.touch #impText{ height:84px; font-size:11.5px; }   /* 矮屏上别把按钮顶出屏幕 */
+  body.touch #importBox .panel{ padding:16px 18px 14px; }
+  body.touch #importBox .rules .tip:nth-of-type(2){ display:none; }  /* 电脑上那句「记事本复制」在手机上没用 */
+  body.touch #importBox .ops{ flex-wrap:wrap; }
+  body.touch #importBox .btn{ flex:1 1 30%; padding:12px 6px; font-size:13px; }
     body.touch #btnSelBack{ margin-top:8px; padding:10px 0; }
     body.touch .lv-row{ padding:10px 10px 10px 14px; }
     body.touch .lv-name b{ font-size:14.5px; }
@@ -485,14 +490,17 @@
   <div class="panel">
     <div class="panel-title">导 入 地 图</div>
     <div class="rules">
-      <p class="tip">别人发你的地图是<b>一个 .txt 文件</b>。用记事本打开它，<b>Ctrl+A 全选</b> → <b>Ctrl+C 复制</b>，粘到下面，点「开始玩」。</p>
-      <p class="tip" style="opacity:.75">整个文件从头到尾都要复制，不要只挑中间几行。</p>
+      <p class="tip">手机上最简单：<b>点下面「选择 .txt 文件」</b>，直接选微信/QQ 里收到的那个文件就行，不用复制粘贴。</p>
+      <p class="tip" style="opacity:.75">电脑上也可以用记事本打开它，<b>Ctrl+A 全选</b> → <b>Ctrl+C 复制</b>，粘到下面的框里（要整份复制，别只挑几行）。</p>
       <p class="tip" id="impHint" style="color:#a8842c"></p>
     </div>
     <textarea id="impText" spellcheck="false" placeholder="把 .txt 里的全部内容粘到这里&#10;（应该长这样：/* 延时回响 · 自制地图 … */ 然后 var MAP = [ '####', … ];）"></textarea>
     <div class="ops" style="display:flex;gap:10px;justify-content:center;margin-top:10px">
       <button id="btnImpOk" class="btn">开始玩</button>
+      <button id="btnImpFile" class="btn">选择 .txt 文件</button>
       <button id="btnImpCancel" class="btn">取 消</button>
+    </div>
+    <input id="impFile" type="file" accept=".txt,text/plain" style="display:none">
     </div>
   </div>
 </div>
@@ -503,7 +511,7 @@
     <div class="panel-title">删 除 存 档</div>
     <div class="rules">
       <p class="del-who" id="delWho"></p>
-      <p class="tip del-warn">删掉之后这张地图就<b>找不回来了</b>。<br>编辑器里的原图还在，改完可以再「发送到游戏」。</p>
+      <p class="tip del-warn">删掉之后这张地图就<b>找不回来了</b>。<br>编辑器里的原图还在，改完可以再「分享 / 发送」一次。</p>
     </div>
     <div class="ops" style="display:flex;gap:10px;justify-content:center;margin-top:16px">
       <button id="btnDelNo" class="btn">取 消</button>
@@ -512,7 +520,7 @@
   </div>
 </div>
 
-<!-- 收件箱：编辑器「发送到游戏」后，本弹窗自动出现，一键载入 -->
+<!-- 分享链路：点开别人发来的 ?m= 链接后弹出，一键载入 -->
 <div id="inboxBox" class="overlay hidden">
   <div class="panel">
     <div class="panel-title">收 到 新 地 图</div>
@@ -687,7 +695,7 @@ var BLOCKS = [
 ];
 
 /* ---------------- 地图风格（主题）---------------
-   可选全局 THEME：编辑器「发送到游戏」/ 粘贴导入时带上，整套配色跟着地图走。
+   可选全局 THEME：编辑器「分享 / 发送」或粘贴导入时带上，整套配色跟着地图走。
    不贴 THEME 就用默认「米白」（= 下面这套原配色），老关卡零影响。 */
 var THEME_DEFAULT = {
   name:'米白', bg:'#f2f5fa', brick:'#e8dfd0', brickTop:'#f7f3ea', brickSide:'#cfc6b8',
@@ -4876,15 +4884,12 @@ window.addEventListener('orientationchange', function(){ setTimeout(fit, 120); }
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
 
 /* =====================================================================
-   地图导入（编辑器直连）——本地「我的地图」三个存档位
-   ① 编辑器「发送到游戏」把包写进收件箱（delayed_echo_inbox）
-      → 游戏启动时 checkInbox() 自动把它搬进空存档位并长期保留
-      → 选关页底部直接出现这一关，可以反复进（不再是一次性弹窗）。
-   ② 选关页「导入地图」：粘编辑器导出的整段文本 → 存空位 + 立刻开玩。
-   存档靠 localStorage（同源 + 同设备 + 同浏览器），换设备/换浏览器读不到；
-   跨设备搬运请走「下载 .txt」→「导入地图」粘文本。
+   「我的地图」三个存档位 + 两种导入方式（只有两条路，别再加了）
+   ① 点分享链接（?m=）：编辑器「分享 / 发送 ▶」把地图压进网址，
+      微信发给自己或朋友，手机点开就弹「收到新地图」，一键进关卡并存空位。
+   ② 导入 .txt：手机上直接「选择 .txt 文件」，电脑上粘贴文本。
+   存档靠 localStorage（同源 + 同设备 + 同浏览器）—— 换设备就走 ①②。
    ===================================================================== */
-var INBOX_KEY = 'delayed_echo_inbox';
 var SLOT_KEY  = 'delayed_echo_slots';        // 三个自定义地图存档位（持久，无过期）
 var SLOT_N    = 3;
 var SLOT_NO   = ['①', '②', '③'];
@@ -4983,6 +4988,92 @@ function parseImported(txt){
   pkg.map = pkg.map.map(function(r){ return String(r); });
   return pkg;
 }
+/* ================= 分享链接：?m=<压缩包> =================
+   编辑器「复制分享链接」把地图塞进网址，手机上点开就能导入 —— 不用登录、不用传文件。
+   地图按行做游程编码：<次数><字符>，次数用 64 字符表压成 1 个符号（1..64 → 0.._）。
+   结构化地图 10KB 的 JSON 能压到 1~2KB 的网址，一条微信消息发得过去。 */
+var RLE_CH = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
+function rlePack(rows){                    // 行数组 → 压缩串（编辑器与游戏共用同一份规则）
+  var out = [];
+  for (var i = 0; i < rows.length; i++){
+    var s = String(rows[i]), line = '', j = 0;
+    while (j < s.length){
+      var ch = s.charAt(j), n = 1;
+      while (j + n < s.length && s.charAt(j + n) === ch && n < 64) n++;
+      line += RLE_CH.charAt(n - 1) + ch; j += n;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+}
+function rleUnpack(str){
+  var lines = String(str || '').split('\n'), out = [];
+  for (var i = 0; i < lines.length; i++){
+    var s = lines[i], row = '', j = 0;
+    while (j < s.length){
+      var v = RLE_CH.indexOf(s.charAt(j));
+      if (v < 0) return null;
+      var ch = s.charAt(j + 1);
+      if (!ch) return null;
+      for (var k = 0; k <= v; k++) row += ch;
+      j += 2;
+    }
+    out.push(row);
+  }
+  return out;
+}
+function decodeShare(raw){
+  var o;
+  try { o = JSON.parse(raw); } catch (e){ return null; }
+  if (!o || !o.m) return null;
+  var map = rleUnpack(o.m);
+  if (!map || !map.length || !map[0].length) return null;
+  return { name: o.n || '', map: map, mechs: o.k || [], blocks: o.b || [], theme: o.t || null };
+}
+var pendingShare = null;                   // 链接里收到的那张图（等玩家点「载入」）
+function showShare(pkg){
+  pendingShare = pkg;
+  var w = pkg.map[0].length, h = pkg.map.length;
+  var nm = String(pkg.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  $('inboxInfo').innerHTML = '朋友分享来一张 <b>' + w + '×' + h + '</b> 的地图'
+    + (nm && nm !== '自定义' ? '（风格：<b>' + nm + '</b>）' : '')
+    + '。<br>载入后会存进「我的地图」的空存档位，下次打开还在。';
+  elInbox.classList.remove('hidden');
+}
+/* 收到一张分享来的地图：auto=作者本机那一次（直接落位开玩），
+   否则先弹「收到新地图」让玩家自己决定 —— 陌生链接不该自己就跑起来。 */
+function loadShare(pkg, auto){
+  if (!pkg) return false;
+  if (!auto){ showShare(pkg); return true; }
+  if (!applyImported(pkg)) return false;
+  var i = slotPut(pkg);
+  buildSlotList();
+  startGame(customIdx);
+  toast(i >= 0 ? '地图已存入「我的地图 ' + SLOT_NO[i] + '」——选关页可以直接进'
+               : '三个存档位都满了：这次先临时玩，去选关页删一个旧存档再发一次');
+  return true;
+}
+function dropUrlParam(k){                  // 导入后把 ?m= 从地址栏摘掉：刷新不会重复弹
+  try {
+    var u = new URL(window.location.href);
+    if (!u.searchParams.has(k)) return;
+    u.searchParams.delete(k);
+    window.history.replaceState(null, '', u.pathname + (u.search ? u.search : '') + u.hash);
+  } catch (e){}
+}
+var _shareAuto = false;                 // 编辑器本机打开的那一次（ok=1）：直接载入，不再弹窗
+function readShareParam(){
+  var q;
+  try { q = (window.location && window.location.search) || ''; } catch (e){ q = ''; }
+  var m = /[?&]m=([^&]*)/.exec(q);
+  if (!m) return null;
+  _shareAuto = /[?&]ok=1/.test(q);
+  var pkg = null;
+  try { pkg = decodeShare(decodeURIComponent(m[1])); } catch (e){ pkg = null; }
+  dropUrlParam('m'); dropUrlParam('ok');
+  return pkg;
+}
+
 var customIdx = -1;                  // 自定义地图在 LEVELS 里占的固定一格（反复打开只替换，不堆积）
 function applyImported(pkg, titleOverride){
   if (!pkg) return false;
@@ -5004,7 +5095,7 @@ function applyImported(pkg, titleOverride){
       '1. 这张地图由<b>地图编辑器</b>制作并存在本机——地形、机关、贴纸、配色都与编辑器里一致。',
       '2. 机关走<b>装置绑定表</b>：开关踩一下切换、再踩复位；传送门要开关唤醒，唤醒后永久敞开。',
       '3. <b>断桥</b>只认你的脚步——影子踩上去，桥就会碎。',
-      '4. 想改这张地图？回编辑器改完再「发送到游戏」，会覆盖你选的那个存档位。'
+      '4. 想改这张地图？回编辑器改完再点「分享 / 发送 ▶」，会存进空着的存档位。'
     ],
     introTip:'集齐钥匙出口才会打开；开关唤醒传送门与木板；',
     introKeys:'A / D 移动 · 空格 跳跃 · R 释放影子 · F 查看告示 · ESC 暂停'
@@ -5061,7 +5152,7 @@ function buildSlotList(){
       row.appendChild(name); row.appendChild(ops);
     } else {
       b.textContent = '空 位 ' + SLOT_NO[i];
-      it.textContent = '在地图编辑器里做好图，点「发送到游戏」就会存到这里';
+      it.textContent = '在地图编辑器里做好图，点「分享 / 发送 ▶」就会存到这里';
       name.appendChild(b); name.appendChild(it);
       row.appendChild(name);
     }
@@ -5075,42 +5166,30 @@ function openSlot(i){                // 从存档位进入：套用主题/图块
   if (!applyImported(rec, t)){ toast('这张地图超出 100×100 上限，打不开'); return; }
   startGame(customIdx);
 }
-function inboxGet(){                // 收件箱：7 天内有效
-  try {
-    var d = JSON.parse(localStorage.getItem(INBOX_KEY) || 'null');
-    if (d && d.map && d.map.length && Date.now() - d.t < 7 * 86400000) return d;
-  } catch (e){}
-  return null;
-}
-function inboxClear(){ try { localStorage.removeItem(INBOX_KEY); } catch (e){} }
-function checkInbox(){              // 编辑器发来 → 自动落进存档位（有空位就不打扰玩家）
-  var d = inboxGet();
-  if (!d) return;
-  var want = (typeof d.slot === 'number' && d.slot >= 0 && d.slot < SLOT_N) ? d.slot : slotFree();
-  if (want >= 0){
-    var i = slotPut(d, want);
-    if (i >= 0){
-      inboxClear(); buildSlotList();
-      toast('地图已存入「我的地图 ' + SLOT_NO[i] + '」——选关页可以直接进');
-      return;
-    }
-    $('inboxInfo').innerHTML = '地图编辑器发来一张 <b>' + d.map.length + '×' + (d.map[0] || '').length
-      + '</b> 的地图，但本机存储写不进去了（可能已满）。可以先玩一次，或删掉一个存档位再发一次。';
-    elInbox.classList.remove('hidden');
-    return;
-  }
-  /* 三个都满了：绝不静默覆盖——把选择权交回玩家 */
-  $('inboxInfo').innerHTML = '地图编辑器发来一张 <b>' + d.map.length + '×' + (d.map[0] || '').length
-    + '</b> 的地图' + (d.name && d.name !== '自定义' ? '（风格：<b>' + String(d.name).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</b>）' : '')
-    + '，但三个存档位都满了。<br>可以先载入玩一次；或在选关页删掉一个旧存档，再回编辑器发一次。';
-  elInbox.classList.remove('hidden');
-}
 /* ---- 导入界面按钮 ---- */
 $('btnImport').onclick = function(){
   $('impHint').textContent = '粘完会存进「我的地图」空位，之后在选关页随时能进';
   elImport.classList.remove('hidden');
 };
 $('btnImpCancel').onclick = function(){ elImport.classList.add('hidden'); };
+/* 手机上粘一大段文本很折磨 —— 直接选 .txt 文件，读进来走同一套校验 */
+$('btnImpFile').onclick = function(){ $('impFile').click(); };
+$('impFile').addEventListener('change', function(){
+  var f = this.files && this.files[0];
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){
+    var txt = String(rd.result || '');
+    $('impText').value = txt;
+    var why = importReason(txt);
+    $('impHint').textContent = (why === 'ok')
+      ? '读到了「' + f.name + '」（' + Math.max(1, Math.round(txt.length / 1024)) + ' KB），点「开始玩」就行'
+      : IMPORT_TIP[why];
+  };
+  rd.onerror = function(){ $('impHint').textContent = '这个文件读不了 —— 换一个 .txt 试试'; };
+  rd.readAsText(f, 'utf-8');
+  this.value = '';                        // 允许重复选同一个文件
+});
 $('btnImpOk').onclick = function(){
   var raw = $('impText').value;
   var why = importReason(raw);
@@ -5125,13 +5204,16 @@ $('btnImpOk').onclick = function(){
                : '三个存档位都满了：这次只是临时玩，没有存档');
 };
 $('btnInboxOk').onclick = function(){
-  var d = inboxGet();
-  elInbox.classList.add('hidden'); inboxClear();
-  if (d && applyImported(d)) startGame(customIdx);
+  var d = pendingShare;
+  pendingShare = null;
+  elInbox.classList.add('hidden');
+  if (!d) return;
+  if (applyImported(d)){ var i = slotPut(d); startGame(customIdx);
+    if (i >= 0) toast('已存进「我的地图 ' + SLOT_NO[i] + '」，下次打开还在'); }
 };
 $('btnInboxNo').onclick = function(){
   elInbox.classList.add('hidden');
-  inboxClear();
+  pendingShare = null;
   var h = $('impHint'); if (h) h.textContent = '';
 };
 /* ---- 删除确认弹窗按钮 ---- */
@@ -5665,12 +5747,17 @@ if (TOUCH){
 
 loadLevel(0);
 fit();
-/* 无头截图 / 演示用：?auto=1 直接进第 1 关（正常游玩不会触发） */
+/* 分享链接 ?m=<压缩包>：
+   编辑器本机点「分享 / 发送 ▶」会带 ok=1 —— 直接落进存档位开玩（不用再点一次）；
+   别人转手发来的链接没有 ok=1 —— 先弹「收到新地图」让玩家自己决定。 */
+var _sharePkg = readShareParam();
+if (_sharePkg) loadShare(_sharePkg, _shareAuto);
+/* 无头截图 / 演示用：?auto=1 直接进第 1 关（正常游玩不会触发；带 ?m= 时不抢） */
 var _auto = /[?&]auto=([12])/.exec((window.location && window.location.search) || '');
-if (_auto){ startGame(0); if (_auto[1] !== '2') $('btnIntroOk').click(); }
+if (_auto && !_sharePkg){ startGame(0); if (_auto[1] !== '2') $('btnIntroOk').click(); }
 ensureBgm();                            // 「延时回响」标题动画一起，BGM 就跟着起（首页↔关卡全程连贯）
 playHomeIntro();                        // 首次进首页：播放入场动画
-checkInbox();                           // 编辑器「发送到游戏」发来的地图：一键载入弹窗
+
 /* 自动播放策略：加载时起声若被浏览器拦下（ctx=suspended），
    任意一次用户操作（点击 / 按键 / 触摸 / 移动）都会补起；起来之前不摘监听，并留一条兜底重试 */
 var bgmRetry = null;
@@ -5766,8 +5853,6 @@ window.__echo = {
   applyTheme: applyTheme,                            // 测试：主题应用（缺字段回退默认）
   get theme(){ return THEME; },                      // 测试：当前主题来源
   get th(){ return TH; },                            // 测试：当前生效配色
-  inboxGet: inboxGet, inboxClear: inboxClear,        // 测试：收件箱读写
-  checkInbox: checkInbox,                            // 测试：收件箱弹窗检测
   get slots(){ return SLOTS; },                      // 测试：三个存档位内容
   slotPut: slotPut, slotDrop: slotDrop, slotFree: slotFree,  // 测试：存档位增删
   buildSlotList: buildSlotList, openSlot: openSlot,  // 测试：存档位列表 / 进入
@@ -5791,6 +5876,8 @@ window.__echo = {
   toast: toast,
   play: function(s){ state = s || 'playing'; },   // 测试：强制切状态（跳过 intro 直接玩）
   tSync: tSync,                                   // 测试：手动跑一次按键状态同步
+  rlePack: rlePack, rleUnpack: rleUnpack,          // 测试：分享链接的编解码
+  decodeShare: decodeShare, loadShare: loadShare,
   get touch(){ return TOUCH; },                   // 测试：是否处于触屏模式
   Snd: Snd
 };
