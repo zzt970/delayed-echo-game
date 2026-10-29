@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#eef1f9" />
 <title>延时回响</title>
 <style>
   :root{
@@ -268,6 +271,185 @@
   @keyframes sfIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
   .st-svg{ display:block; margin:0 auto; overflow:visible; }
   .st-stroke{ fill:none; stroke-linejoin:round; stroke-linecap:round; }
+
+  /* =====================================================================
+     手机 / 触屏适配区（只增不改）
+     · 全部规则都挂在 body.touch 下 —— 桌面端一行都不会生效，键盘手感原样保留
+     · body.touch 由脚本按设备自动打上（触屏且粗指针），也可用 ?touch=1 / ?touch=0 强制
+     ===================================================================== */
+  body.touch{
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent; overscroll-behavior:none;
+  }
+  body.touch #game{ touch-action:none; }
+  body.touch #home, body.touch #select{ touch-action:manipulation; }
+
+  /* 游戏页：画布铺满、去掉卡片外框；HUD 浮在画布上沿，底部控制条让位给触屏按键 */
+  body.touch .stage{ position:relative; width:100%; height:100%; gap:0; justify-content:center; }
+
+  body.touch .canvas-wrap{ border-radius:0; border:none; box-shadow:none; }
+  body.touch #cv{ touch-action:none; -webkit-tap-highlight-color:transparent; }  /* 点告示牌时不要触发双击缩放 */
+  body.touch .hud{
+    position:fixed; left:50%; transform:translateX(-50%); z-index:9;
+    pointer-events:none; align-items:center; padding:0 8px;
+  }
+  body.touch .hud .lv{ font-size:13px; letter-spacing:.12em; }
+  body.touch .hud .lv i{ display:none; }
+  body.touch .hud .tip{ font-size:11px; letter-spacing:.06em; }
+  body.touch #pauseTip{ display:none; }
+  body.touch .ctrl{ display:none; }
+  body.touch .aud-hint{ bottom:auto; top:16%; transform:translateX(-50%); }
+  body.touch .aud-hint.hidden{ transform:translate(-50%,8px); }
+
+  /* --- 触屏按键层（桌面端 display:none，不参与布局也不吃事件） ---
+     视觉原则：不铺白卡片，只在画面上留几笔墨色的记号 ——
+     方向是两个折角箭头，跳跃是一圈淡紫细环，回响是带足迹数字的虚线圈。
+     每个记号都带一层白色柔光（filter: drop-shadow），压在天空或地面都读得出来，
+     又不至于像贴上去的按钮。按下时才染上游戏主色，恢复「同一支笔」的感觉。 */
+  :root{ --bh:56px; }
+  #touchUI{ display:none; }
+  body.touch #touchUI{
+    display:block; position:absolute; inset:0; z-index:8;
+    touch-action:none; pointer-events:none;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  /* 按键分两层：
+     ① 判定盒（.tb）= 比看得见的碟子大一圈，拇指按边缘也算按到；
+     ② 视觉碟（::before）= 磨砂玻璃圆，缩在盒子里，尽量不压住地面的方块。
+     半透明 + 轻度模糊，底下的天空、地面都还看得见，只是被滤柔了一点 ——
+     压在画面上像 HUD，不像贴纸。 */
+  #touchUI .tb{
+    pointer-events:auto;
+    display:flex; align-items:center; justify-content:center;
+    color:rgba(64,72,96,.78); font-family:inherit;
+    background:none; border:0; box-shadow:none;
+    transition:color .12s ease, transform .1s cubic-bezier(.3,.9,.4,1);
+  }
+  #touchUI .tb::before{
+    content:''; position:absolute; inset:7px; border-radius:50%;
+    background:rgba(255,255,255,.30);
+    border:1px solid rgba(255,255,255,.66);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85), 0 2px 7px rgba(90,100,130,.11);
+    -webkit-backdrop-filter:blur(5px) saturate(1.06);
+    backdrop-filter:blur(5px) saturate(1.06);
+    transition:background .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  #touchUI .tb > *{ position:relative; z-index:1; }
+  #touchUI .tb.on{ color:#fff; transform:scale(.96); }
+  #touchUI .tb.on::before{
+    background:rgba(139,129,192,.74); border-color:rgba(255,255,255,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  /* 折角箭头：两条边框拼成，不用字符「‹ ›」—— 字符随字体字形会飘，边框永远一个样 */
+  .arw{
+    display:block; width:calc(var(--bh) * .25); height:calc(var(--bh) * .25);
+    border-left:2.5px solid currentColor; border-bottom:2.5px solid currentColor;
+    border-radius:2px;
+  }
+  #tleft .arw { transform:rotate(45deg); }
+  #tright .arw{ transform:rotate(-135deg); }
+  #tjump .arw{ transform:rotate(135deg); width:calc(var(--bh) * .29); height:calc(var(--bh) * .29); }
+
+  /* 方向：两个圆碟并排，共用一块滑动判定区（拇指滑过去自动换向）。
+     整块往下压 6px：碟子落在画布最下面那条空处，只压到地面的下沿。 */
+  #tpad{
+    position:absolute; left:8px; bottom:2px;
+    left:calc(8px + env(safe-area-inset-left,0px));
+    bottom:calc(2px + env(safe-area-inset-bottom,0px));
+    display:flex; gap:calc(var(--bh) * .04);
+    pointer-events:auto; touch-action:none;
+  }
+  #tpad .tb{ position:relative; width:calc(var(--bh) * 1.06); height:calc(var(--bh) * 1.06); }
+
+  /* 跳跃：主操作，碟子略大、带一点薰衣草 */
+  #tjump{
+    position:absolute; right:12px; bottom:2px;
+    right:calc(12px + env(safe-area-inset-right,0px));
+    bottom:calc(2px + env(safe-area-inset-bottom,0px));
+    width:calc(var(--bh) * 1.18); height:calc(var(--bh) * 1.18);
+    background:none;
+  }
+  #tjump::before{ inset:6px; background:rgba(243,239,253,.50); border-color:rgba(255,255,255,.74); color:#6f64b8; }
+  #tjump{ color:#6f64b8; }
+
+  /* 回响：圈里直接写足迹数 —— 数字就是它自己的标签（与跳跃键同心） */
+  #techo{
+    position:absolute;
+    right:calc(12px + env(safe-area-inset-right,0px) + var(--bh) * 1.26);
+    bottom:calc(2px + env(safe-area-inset-bottom,0px) + var(--bh) * .115);
+    width:calc(var(--bh) * .95); height:calc(var(--bh) * .95);
+    color:#6f64b8;
+    font-size:calc(var(--bh) * .28); font-weight:600; letter-spacing:0;
+    flex-direction:column; line-height:1;
+  }
+  #techo::before{ inset:6px; }
+  #techo.wait{ color:rgba(98,106,130,.74); }
+  #techo.wait::before{ background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.5); }
+  #techo.ready::before{
+    border-color:rgba(139,129,192,.62);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.82), 0 0 0 3px rgba(139,129,192,.12);
+  }
+  #techo.on{ color:#fff; }
+  #techoN{ font-style:normal; }
+  #techoN.zero{ opacity:.5; }
+
+  /* 暂停：右上角两道竖线（等价键盘的 ESC），裸图标 + 白描边光晕 */
+  #tpause{
+    position:fixed; right:8px; top:6px; width:42px; height:42px;
+    right:calc(8px + env(safe-area-inset-right,0px));
+    top:calc(6px + env(safe-area-inset-top,0px));
+    display:flex; align-items:center; justify-content:center; gap:3.5px;
+    pointer-events:auto; cursor:pointer;
+  }
+  #tpause i{
+    display:block; width:3px; height:13px; border-radius:2px; background:#5d6478;
+    box-shadow:0 0 0 2.5px rgba(255,255,255,.6); transition:background .1s ease;
+  }
+  #tpause:active i{ background:#8b81c0; }
+  /* 竖屏：拇指落在更靠里的位置，按键整体上提一点（预览面板多半是竖的） */
+  @media (orientation:portrait){
+    #tpad{ left:14px; right:auto; top:6px; bottom:auto; }
+    #tjump{ right:16px; top:0; bottom:auto; }
+    #techo{ right:calc(16px + var(--bh) * 1.26); top:calc(var(--bh) * .115); bottom:auto; }
+  }
+
+  /* 触屏上弹窗一律可滚 + 按钮加大：横屏手机只有 390px 高，规则面板必须滚得动 */
+  body.touch .panel{
+    max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+    overflow-y:auto; -webkit-overflow-scrolling:touch; padding:22px 24px;
+  }
+  body.touch .panel-title{ font-size:16px; margin-bottom:14px; }
+  body.touch .panel .btn{ padding:14px 0; font-size:15.5px; }
+  body.touch .rules{ font-size:13px; line-height:1.85; }
+  body.touch .rules .tip, body.touch .rules .keys{ font-size:12px; }
+  body.touch .sign-text{ font-size:14px; line-height:1.9; margin:0 0 6px; }
+  body.touch .win-text{ font-size:13px; }
+  body.touch .btn-main{ padding:16px 54px; font-size:20px; }
+  body.touch .home-hint{ margin-top:26px; font-size:13.5px; line-height:1.95; letter-spacing:.04em;
+    white-space:pre-line; max-width:88vw; margin-left:auto; margin-right:auto; }
+  body.touch .sel-card{ width:min(560px,92vw); padding:18px 20px 16px; }
+  body.touch .lv-row{ padding:14px 12px 14px 16px; }
+  /* 横屏手机屏幕矮：关卡列表改两列，一屏看全，不用在弹窗里滚来滚去 */
+  @media (orientation:landscape){
+    body.touch .sel-card{ width:min(760px,94vw); }
+    body.touch .lv-list{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
+    body.touch .sel-title{ font-size:15px; margin:0 0 10px; letter-spacing:.3em; }
+    body.touch .slot-head{ margin:9px 0 6px; font-size:10.5px; }
+    body.touch .sel-tip{ font-size:11px; margin:6px 0 0; }
+    body.touch #btnImport{ margin-top:8px !important; padding:8px 14px; font-size:12px; }
+    body.touch #btnSelBack{ margin-top:8px; padding:10px 0; }
+    body.touch .lv-row{ padding:10px 10px 10px 14px; }
+    body.touch .lv-name b{ font-size:14.5px; }
+    body.touch .lv-name i{ font-size:11px; }
+    body.touch .lv-enter{ padding:8px 16px; font-size:12.5px; letter-spacing:.12em; }
+    body.touch .slot-list{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
+    body.touch .slot-row{ flex-direction:column; align-items:stretch; gap:5px; padding:8px 10px; }
+    body.touch .slot-name i{ font-size:10.5px; line-height:1.5; }
+    body.touch .slot-ops{ justify-content:flex-end; }
+    body.touch .slot-go{ padding:6px 12px; font-size:11.5px; }
+  }
+  body.touch .slot-go, body.touch .slot-del{ padding:10px 14px; }
+  body.touch .sel-back{ padding:12px 0; }
 </style>
 </head>
 <body>
@@ -349,12 +531,22 @@
     <div class="hud" id="hud">
       <div class="lv"><b id="lvTitle">第1关·回响初现</b><i id="lvSub">让回响停在压力板上，替你守住石门</i></div>
       <div class="tip" id="keyTxt" style="color:#a8842c;font-weight:600"></div>
-      <div class="tip">ESC 暂停</div>
+      <div class="tip" id="pauseTip">ESC 暂停</div>
     </div>
     <div class="canvas-wrap" id="wrap">
       <canvas id="cv" width="1152" height="576" tabindex="0"></canvas>
       <div class="hp" id="hpBar" style="display:none"></div>
       <div class="toast" id="toast"></div>
+    </div>
+    <!-- 触屏按键层：只有手机/平板显示；桌面端由 CSS 完全隐藏，键盘玩法不受影响 -->
+    <div id="touchUI">
+      <div id="tpad">
+        <div class="tb" id="tleft"><i class="arw"></i></div>
+        <div class="tb" id="tright"><i class="arw"></i></div>
+      </div>
+      <div class="tb" id="techo"><i id="techoN">回</i></div>
+      <div class="tb" id="tjump"><i class="arw"></i></div>
+      <div id="tpause"><i></i><i></i></div>
     </div>
     <div class="aud-hint hidden" id="audHint">轻触任意处开启声音</div>
     <div class="ctrl" id="ctrl">
@@ -386,7 +578,7 @@
   <div class="panel">
     <div class="panel-title">路 边 告 示</div>
     <p class="sign-text" id="signText">你迈出的每一步，都会存入足迹，<br>积攒足迹，唤醒回响。</p>
-    <button id="btnSignOk" class="btn">关 闭 （F）</button>
+    <button id="btnSignOk" class="btn">关 闭 <span id="signKeyTip">（F）</span></button>
   </div>
 </div>
 
@@ -395,6 +587,7 @@
     <div class="panel-title">已 暂 停</div>
     <button id="btnResume"  class="btn">继续游戏</button>
     <button id="btnRestart" class="btn">重新开始</button>
+    <button id="btnFull" class="btn hidden">全 屏</button>
     <button id="btnPauseHome" class="btn">回到首页</button>
   </div>
 </div>
@@ -1362,8 +1555,8 @@ function loadLevel(i){                 // 载入第 i 关（0 起）：解析地
   lvTitle.textContent = def.title;
   lvSub.textContent = def.sub;
   applySignTexts();
-  signText.innerHTML = (L.sign && L.sign.text) || def.signText;
-  introSpike.textContent = (def.spikeTip || '') + '。';
+  signText.innerHTML = adaptText((L.sign && L.sign.text) || def.signText);
+  introSpike.textContent = adaptText(def.spikeTip || '') + '。';
   hpBar.style.display = def.hp > 0 ? '' : 'none';
   renderHearts();
   resetLevel();
@@ -2463,6 +2656,19 @@ function nearSign(){                  // 返回最近的那块告示牌（没有
   }
   return best;
 }
+/* 输入动作抽成三个函数：键盘与触屏按钮走同一条路 —— 手感不会因为设备不同而分叉 */
+function pressDir(d){                  // 记方向（真正迈步由 update 统一裁决）
+  if (!player) return;
+  player.dir = d; dirTap = d; dirTapT = 10;
+}
+function pressJump(){                  // 起跳：刚迈出半步就先撤销这一步再跳（跳跃输入不丢）
+  if (player && player.act === 'move' && player.at <= MOVE_CANCEL && player.onGround){
+    cancelMove();
+    tryJump();
+  } else {
+    jumpBuf = JUMP_BUFFER;
+  }
+}
 window.addEventListener('keydown', function(e){
   if (e.code === 'Escape'){
     if (elDel && !elDel.classList.contains('hidden')){ closeDel(); e.preventDefault(); return; }
@@ -2480,20 +2686,11 @@ window.addEventListener('keydown', function(e){
       e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'KeyR') e.preventDefault();
   if (keys[e.code]) return;
   keys[e.code] = true;
-  if (e.code === 'Space'){
-    // 刚迈出半步就按空格 → 撤销这一步直接起跳（避免「先按 D 会变成走一步再跳」）
-    if (player && player.act === 'move' && player.at <= MOVE_CANCEL && player.onGround){
-      cancelMove();
-      tryJump();
-    } else {
-      jumpBuf = JUMP_BUFFER;
-    }
-    return;
-  }
+  if (e.code === 'Space'){ pressJump(); return; }
   if (e.code === 'KeyR'){ releaseShadow(); return; }
   var d = (e.code === 'KeyA' || e.code === 'ArrowLeft') ? -1 :
           (e.code === 'KeyD' || e.code === 'ArrowRight') ? 1 : 0;
-  if (d){ player.dir = d; dirTap = d; dirTapT = 10; }   // 只记方向，移动统一由 update 裁决
+  if (d) pressDir(d);
 });
 window.addEventListener('keyup', function(e){
   keys[e.code] = false;
@@ -2963,7 +3160,7 @@ function doMorph(to){
   shadows = []; cache = [];                    // 世界变了，回声也散了
   L.maxSteps = (A.maxSteps === 0) ? 0 : A.maxSteps;
   applySignTexts();
-  signText.innerHTML = (L.sign && L.sign.text) || A.sign || '';
+  signText.innerHTML = adaptText((L.sign && L.sign.text) || A.sign || '');
   /* 落点：直接用新幕预设的出生点（P 格正下方那格地板顶）。
      不用「按列吸附」——三张图是完全不同的世界，玩家上一幕站在哪一列
      对新幕没有意义；按列吸附加偶发把人塞到"崖底/层1"，会毁掉开幕设计
@@ -3074,7 +3271,7 @@ function restartLevel(){
 function openSignDialog(s){
   if (state !== 'playing') return;
   var sg = s || nearSign();
-  if (sg) signText.innerHTML = sg.text || '';
+  if (sg) signText.innerHTML = adaptText(sg.text || '');
   ensureActMusic();                    // 曲子该响就响：看告示不算暂停
   state = 'dialog';
   elSign.classList.remove('hidden');
@@ -3092,11 +3289,11 @@ function openDeadPanel(){             // 血量耗尽：不直接回出生点，
 }
 
 var toastT = null;
-function toast(msg){
+function toast(msg, ms){
   elToast.textContent = msg;
   elToast.classList.add('show');
   clearTimeout(toastT);
-  toastT = setTimeout(function(){ elToast.classList.remove('show'); }, 1900);
+  toastT = setTimeout(function(){ elToast.classList.remove('show'); }, ms || 1900);
 }
 
 /* =====================================================================
@@ -4103,7 +4300,7 @@ function drawOneSign(sg){
   px(cx - 12, by + 16, 24, 3, ctx.fillStyle);
   px(cx - 8,  by + 23, 16, 3, ctx.fillStyle);
 }
-function drawSignHint(){                                       // 靠近时的「按F键」
+function drawSignHint(){                                       // 靠近时的「按F键」/ 手机上的「点一下」
   if (!player || state !== 'playing' && state !== 'intro') return;
   var sgH = nearSign();
   if (!sgH) return;
@@ -4114,7 +4311,7 @@ function drawSignHint(){                                       // 靠近时的�
   ctx.fillStyle = '#6b6488';
   ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('按 F 键', bx + 30, by + 12);
+  ctx.fillText((typeof TOUCH !== 'undefined' && TOUCH) ? '点一下' : '按 F 键', bx + 30, by + 12);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
@@ -4567,6 +4764,7 @@ function frame(now){
   } else acc = 0;
   if (state !== 'paused') animT += dt / 1000;
   if (state !== 'home' && state !== 'select') render();
+  tSync();                             // 触屏按钮状态（足迹数 / 告示牌浮出）
 }
 requestAnimationFrame(frame);
 
@@ -4610,6 +4808,16 @@ function showSelect(){
   ensureBgm();
   buildLevelList();
 }
+function fillIntro(i){                  // 入关规则面板：文案按设备适配（触屏不讲键盘键名）
+  var rr = LEVELS[i].introRules || [];  // 每关各自的规则文案（填几条显示几条，空槽自动隐藏）
+  for (var q = 0; q < 4; q++){
+    var el = $('introR' + (q + 1));
+    if (rr[q]){ el.innerHTML = adaptText(rr[q]); el.style.display = ''; }
+    else { el.innerHTML = ''; el.style.display = 'none'; }
+  }
+  $('introTip').innerHTML = adaptText(LEVELS[i].introTip || '');
+  $('introKeys').innerHTML = adaptText(LEVELS[i].introKeys || 'A / D 移动 · 空格 跳跃 · R 释放影子 · F 查看告示 · ESC 暂停');
+}
 function startGame(i){                  // i = 关卡下标（0 起）
   Snd.init(); Snd.resume();
   ensureBgm();                          // 已在放则只是保证音量，不会重开
@@ -4617,27 +4825,55 @@ function startGame(i){                  // i = 关卡下标（0 起）
   elSelect.classList.add('hidden');
   elGame.classList.remove('hidden');
   loadLevel(i);
-  var rr = LEVELS[i].introRules || [];  // 每关各自的规则文案（填几条显示几条，空槽自动隐藏）
-  for (var q = 0; q < 4; q++){
-    var el = $('introR' + (q + 1));
-    if (rr[q]){ el.innerHTML = rr[q]; el.style.display = ''; }
-    else { el.innerHTML = ''; el.style.display = 'none'; }
-  }
-  $('introTip').innerHTML = LEVELS[i].introTip || '';
-  $('introKeys').innerHTML = LEVELS[i].introKeys || 'A / D 移动 · 空格 跳跃 · R 释放影子 · F 查看告示 · ESC 暂停';
+  fillIntro(i);
   state = 'intro';                      // 先看本关规则，再开始
   elIntro.classList.remove('hidden');
   fit();
 }
 function fit(){
+  var vw = window.innerWidth, vh = window.innerHeight;
+  /* ---- 触屏：画布铺满视口（竖屏时靠上，把下半屏让给拇指），HUD 浮在画布上沿 ---- */
+  if (TOUCH){
+    var s = Math.min(vw / VIEW_W, vh / VIEW_H);
+    if (vh > vw) s = Math.min((vw - 12) / VIEW_W, (vh * 0.56) / VIEW_H);  // 竖屏（预览面板常见）：按宽度收，下方留给拇指
+    var w = Math.round(VIEW_W * s);
+    elWrap.style.width = w + 'px';
+    elHud.style.width  = w + 'px';
+    elCtrl.style.width = w + 'px';
+    var rect = elWrap.getBoundingClientRect();
+    elHud.style.top = Math.max(0, Math.round(rect.top - 2)) + 'px';
+    /* 判定盒尺寸跟着画布走（而不是跟着屏幕）：夹在 42~56px，
+       看得见的碟子还要再小 12~14px（.tb::before 的 inset） */
+    /* 横屏：按键压在地面下沿那条空处，尺寸跟着画布（越小越不挡）；
+       竖屏：按键在画布下方的空地上，不受画布限制，可以给到拇指舒服的大小 */
+    var bh = (vh > vw) ? Math.max(48, Math.min(64, vw * 0.135))
+                       : Math.max(42, Math.min(56, Math.min(rect.height * 0.15, rect.width * 0.07)));
+    document.documentElement.style.setProperty('--bh', Math.round(bh) + 'px');
+    /* 按键层贴着画布：横屏落在画布四角（不再飘到黑边外面），
+       竖屏横向对齐画布、纵向一直铺到屏幕底（拇指正好落在下方空处） */
+    if (tUI){
+      tUI.style.left   = Math.round(rect.left) + 'px';
+      tUI.style.width  = Math.round(rect.width) + 'px';
+      tUI.style.top    = Math.round(rect.top) + 'px';
+      if (vh > vw){                                 // 竖屏：按键紧贴画布下沿，整块（画布+按键）竖直居中
+        tUI.style.top    = Math.round(rect.bottom + 10) + 'px';
+        tUI.style.height = Math.round(vh - rect.bottom - 10) + 'px';
+      } else {
+        tUI.style.height = Math.round(rect.height) + 'px';
+      }
+    }
+    return;
+  }
   // 版面：顶部 HUD + 画布 + 底部 R 控制条（与 HUD 同宽，贴在画布下方）
   var reserve = 28 + 9 + 9 + 64 + 24;                 // HUD + 间距 + 控制条 + 页边距
-  var s = Math.min((window.innerWidth - 32) / VIEW_W, (window.innerHeight - reserve) / VIEW_H, 1);
-  elWrap.style.width = Math.round(VIEW_W * s) + 'px';
-  elHud.style.width  = Math.round(VIEW_W * s) + 'px';
-  elCtrl.style.width = Math.round(VIEW_W * s) + 'px';
+  var ds = Math.min((window.innerWidth - 32) / VIEW_W, (window.innerHeight - reserve) / VIEW_H, 1);
+  elWrap.style.width = Math.round(VIEW_W * ds) + 'px';
+  elHud.style.width  = Math.round(VIEW_W * ds) + 'px';
+  elCtrl.style.width = Math.round(VIEW_W * ds) + 'px';
 }
 window.addEventListener('resize', fit);
+window.addEventListener('orientationchange', function(){ setTimeout(fit, 120); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
 
 /* =====================================================================
    地图导入（编辑器直连）——本地「我的地图」三个存档位
@@ -5214,6 +5450,7 @@ $('btnDeadHome').addEventListener('click', function(){
 $('btnWinNext').addEventListener('click', function(){
   elWin.classList.add('hidden'); this.blur();
   loadLevel(curLevel + 1);              // 进入下一关（BGM 不中断）
+  fillIntro(curLevel);                  // 规则面板换成这一关的文案（原来会沿用上一关的）
   Snd.duck(false);
   state = 'intro';                      // 新关卡先看本关规则提示
   elIntro.classList.remove('hidden');
@@ -5224,8 +5461,213 @@ $('btnWinHome').addEventListener('click', function(){
   showHome();
 });
 
+/* =====================================================================
+   触屏 / 手机适配（桌面端 TOUCH=false，这一整段不会启用）
+   参考手游的做法：
+   ① 左右 = 一块可滑动的方向板：拇指按住左半边/右半边就走，滑过去自动换向，不用抬手
+   ② 跳跃 = 右下大圆键；回响 = 它左边一个次级圆键，角标显示当前足迹
+   ③ 告示牌 = 走到牌子旁边才浮出的胶囊键（等价键盘的 F）
+   ④ 全部走 pointer 事件 + touch-action:none：没有 300ms 延迟，也不会误触缩放/滚动
+   ⑤ 每根手指各自记账（pointerId）：左手按方向、右手按跳跃可以同时成立
+   ⑥ 按键只是「另一套手」，最终都调用 pressDir / pressJump / releaseShadow，
+      物理与手感跟键盘完全同一条路，不会分叉
+   ===================================================================== */
+var TOUCH = (function(){
+  try{
+    var q = (window.location.search || '').match(/[?&]touch=([01])/);
+    if (q) return q[1] === '1';                     // ?touch=1 / ?touch=0 便于调试与演示
+    var coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+    return coarse && (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0);
+  }catch(e){ return false; }
+})();
+
+/* 文案适配：同一句话，触屏上把键盘键名换成按键名（桌面端原样返回） */
+var TXT_MAP = [
+  ['A / D 移动', '左下 ‹ › 移动'],
+  ['空格 跳跃', '右下 ↗ 起跳'],
+  ['R 释放影子', '「回响」放影子'],
+  ['F 查看告示', '点告示牌'],
+  ['ESC 暂停', '右上角暂停'],
+  ['按 R', '点「回响」'],
+  ['按 <b>R</b>', '点「回响」'],
+  ['按 <b>F</b>', '点告示牌']
+];
+function adaptText(h){
+  if (!TOUCH || h == null) return h;
+  h = String(h);
+  for (var i = 0; i < TXT_MAP.length; i++) h = h.split(TXT_MAP[i][0]).join(TXT_MAP[i][1]);
+  return h;
+}
+
+/* ---------------- 触屏按键（桌面端 TOUCH=false，整段不启用） ----------------
+   ① 左下 ‹ › = 一块可滑动的方向区：按住左半边/右半边就走，拇指向对侧滑过去自动换向
+   ② 右下淡紫细环 = 跳跃（等价空格）
+   ③ 它左边带数字的虚线圈 = 放出回响，圈里的数字就是当前足迹（等价 R）
+   ④ 走到告示牌旁边，直接点画面里的那块牌子看字（等价 F）
+   ⑤ 右上角 ❚❚ = 暂停（等价 ESC）
+   所有按键只调用 pressDir / pressJump / releaseShadow —— 和键盘同一条路，
+   物理、跳跃缓冲、落地锁完全一致，手感不会分叉。                            */
+var tUI = $('touchUI'), tPause = $('tpause'), tPad = $('tpad'),
+    tLeft = $('tleft'), tRight = $('tright'), tJump = $('tjump'),
+    tEcho = $('techo'), tEchoN = $('techoN');
+var tDir = 0, tPadPtr = null, tJumpPtr = null, tCoach = false, tEchoOK = null;
+
+function tApplyDir(d){                             // 触屏方向 = 按住/松开 A、D
+  if (tDir === d) return;
+  tDir = d;
+  keys.KeyA = (d === -1);
+  keys.KeyD = (d === 1);
+  tLeft.classList.toggle('on', d === -1);
+  tRight.classList.toggle('on', d === 1);
+  if (d) pressDir(d);
+}
+function tSideAt(x){                               // 手指落在方向区的哪一半
+  var r = tPad.getBoundingClientRect();
+  return x < r.left + r.width / 2 ? -1 : 1;
+}
+function tSignAt(cx, cy){                          // 手指是不是点在告示牌上（世界坐标反算，跟画布缩放无关）
+  if (state !== 'playing' || !player) return null;
+  var sg = nearSign();
+  if (!sg) return null;
+  var r = cv.getBoundingClientRect();
+  var sc = r.width / VIEW_W;
+  var wx = (cx - r.left) / sc + cam.x;
+  var wy = (cy - r.top) / sc + cam.y;
+  var bx = sg.c * CELL + CELL / 2, by = sg.r * CELL;
+  return (wx > bx - 40 && wx < bx + 40 && wy > by - 50 && wy < by + CELL + 10) ? sg : null;
+}
+function tSync(){                                  // 每帧收尾：按键状态跟游戏状态对齐
+  if (!TOUCH) return;
+  if (state !== 'playing'){ if (tDir) tApplyDir(0); }
+  else if (tDir === -1) keys.KeyA = true;          // 重开/重生会清空 keys：手指还按着就补回来
+  else if (tDir === 1)  keys.KeyD = true;
+  var ok = cache.length >= MIN_RELEASE;
+  if (ok !== tEchoOK){                             // 缓存上一次状态：省掉每帧的 class 写入
+    tEchoOK = ok;
+    tEcho.classList.toggle('ready', ok);
+    tEcho.classList.toggle('wait', !ok);
+  }
+  var lab = cache.length ? String(cache.length) : '回';   // 0 步时显示「回」，攒到步数就变成数字
+  if (tEchoN.textContent !== lab) tEchoN.textContent = lab;
+  tEchoN.classList.toggle('zero', cache.length === 0);
+  if (state === 'playing' && !tCoach){             // 第一次能走：把按键讲一遍（只一次）
+    tCoach = true;
+    toast('左下 ‹ › 走　右下 ↗ 跳　数字圈放回响', 3600);
+  }
+}
+
+/* 全屏：手机浏览器地址栏会吃掉七八十像素，占屏比例很可观 —— 进游戏时顺手要一次 */
+function fsOn(){
+  var d = document, el = d.documentElement;
+  return !!(d.fullscreenElement || d.webkitFullscreenElement);
+}
+function lockLandscape(){
+  try{
+    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){});
+  }catch(e){}
+}
+function toggleFull(){
+  var d = document, el = d.documentElement;
+  try{
+    if (fsOn()){
+      if (d.exitFullscreen) d.exitFullscreen();
+      else if (d.webkitExitFullscreen) d.webkitExitFullscreen();
+    } else if (el.requestFullscreen){
+      var pr = el.requestFullscreen({ navigationUI:'hide' });
+      if (pr && pr.then) pr.then(lockLandscape).catch(function(){});
+      else lockLandscape();
+    } else if (el.webkitRequestFullscreen){
+      el.webkitRequestFullscreen(); lockLandscape();
+    }
+  }catch(e){}
+  setTimeout(function(){ var b = $('btnFull'); if (b) b.textContent = fsOn() ? '退 出 全 屏' : '全 屏'; fit(); }, 400);
+}
+
+if (TOUCH){
+  document.body.classList.add('touch');
+  var bf = $('btnFull');
+  if (bf) bf.classList.remove('hidden');
+  $('homeHint').textContent = '左下 ‹ › 移动　右下 ↗ 跳跃\n回响圈 放影子　点告示牌 看字';
+  var sk = $('signKeyTip'); if (sk) sk.style.display = 'none';
+
+  /* 方向区：按住走，手指滑到另一半自动换向（不用抬手） */
+  tPad.addEventListener('pointerdown', function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    Snd.resume();
+    if (state !== 'playing' || tPadPtr !== null) return;
+    tPadPtr = ev.pointerId;
+    try{ tPad.setPointerCapture(ev.pointerId); }catch(e){}
+    tApplyDir(tSideAt(ev.clientX));
+  });
+  tPad.addEventListener('pointermove', function(ev){
+    if (ev.pointerId !== tPadPtr) return;
+    ev.preventDefault();
+    tApplyDir(tSideAt(ev.clientX));                // 手指滑过中线就换向；滑出界也不松手
+  });
+  function tPadEnd(ev){
+    if (ev.pointerId !== tPadPtr) return;
+    tPadPtr = null;
+    tApplyDir(0);
+  }
+  tPad.addEventListener('pointerup', tPadEnd);
+  tPad.addEventListener('pointercancel', tPadEnd);
+  tPad.addEventListener('lostpointercapture', tPadEnd);
+
+  /* 跳跃 */
+  tJump.addEventListener('pointerdown', function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    Snd.resume();
+    if (tJumpPtr !== null) return;
+    tJumpPtr = ev.pointerId;
+    try{ tJump.setPointerCapture(ev.pointerId); }catch(e){}
+    tJump.classList.add('on');
+    if (state === 'playing') pressJump();
+  });
+  function tJumpEnd(ev){
+    if (ev.pointerId !== tJumpPtr) return;
+    tJumpPtr = null;
+    tJump.classList.remove('on');
+  }
+  tJump.addEventListener('pointerup', tJumpEnd);
+  tJump.addEventListener('pointercancel', tJumpEnd);
+  tJump.addEventListener('lostpointercapture', tJumpEnd);
+
+  /* 回响 */
+  tEcho.addEventListener('pointerdown', function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    Snd.resume();
+    tEcho.classList.add('on');
+    setTimeout(function(){ tEcho.classList.remove('on'); }, 140);
+    if (state === 'playing') releaseShadow();
+  });
+
+  /* 点画面里的告示牌 = 看字（触屏没有 F 键，直接点牌子最自然） */
+  cv.addEventListener('pointerdown', function(ev){
+    if (state !== 'playing') return;
+    var sg = tSignAt(ev.clientX, ev.clientY);
+    if (sg){ ev.preventDefault(); openSignDialog(sg); }
+  });
+
+  /* 暂停 */
+  tPause.addEventListener('pointerdown', function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    if (state === 'dialog') closeSignDialog();
+    else if (state === 'playing' || state === 'paused') togglePause();
+  });
+  // 触屏上点空白处也会解锁音频（浏览器自动播放策略）
+  window.addEventListener('pointerdown', function(){ Snd.resume(); });
+
+  // 进游戏（点「开始游戏」）顺手要一次全屏：地址栏藏起来，画面立刻大一圈
+  $('btnStart').addEventListener('click', function(){ if (!fsOn()) toggleFull(); });
+  $('btnFull').addEventListener('click', function(){ toggleFull(); this.blur(); });
+  $('btnFull').textContent = fsOn() ? '退 出 全 屏' : '全 屏';
+}
+
 loadLevel(0);
 fit();
+/* 无头截图 / 演示用：?auto=1 直接进第 1 关（正常游玩不会触发） */
+var _auto = /[?&]auto=([12])/.exec((window.location && window.location.search) || '');
+if (_auto){ startGame(0); if (_auto[1] !== '2') $('btnIntroOk').click(); }
 ensureBgm();                            // 「延时回响」标题动画一起，BGM 就跟着起（首页↔关卡全程连贯）
 playHomeIntro();                        // 首次进首页：播放入场动画
 checkInbox();                           // 编辑器「发送到游戏」发来的地图：一键载入弹窗
@@ -5348,6 +5790,8 @@ window.__echo = {
   showHome: showHome,
   toast: toast,
   play: function(s){ state = s || 'playing'; },   // 测试：强制切状态（跳过 intro 直接玩）
+  tSync: tSync,                                   // 测试：手动跑一次按键状态同步
+  get touch(){ return TOUCH; },                   // 测试：是否处于触屏模式
   Snd: Snd
 };
 
